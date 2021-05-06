@@ -7,10 +7,11 @@ import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "./Governable.sol";
 
-contract BounceFixedSwap is Configurable {
+contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
@@ -95,16 +96,13 @@ contract BounceFixedSwap is Configurable {
     // pool index => transaction fee
     mapping(uint => uint) public txFeeP;
 
-    uint unlocked;
-
     event Created(uint indexed index, address indexed sender, Pool pool);
     event Swapped(uint indexed index, address indexed sender, uint amount0, uint amount1, uint txFee);
     event Claimed(uint indexed index, address indexed sender, uint amount0, uint txFee);
     event UserClaimed(uint indexed index, address indexed sender, uint amount0);
 
-    function initialize(address _governor) override public {
-        super.initialize(_governor);
-        unlocked = 1;
+    function initialize() public initializer {
+        super.__Ownable_init();
 
         config[TxFeeRatio] = 0.015 ether;
         config[MinValueOfBotHolder] = 60 ether;
@@ -116,30 +114,30 @@ contract BounceFixedSwap is Configurable {
         config[UsdtToken] = uint(0xdAC17F958D2ee523a2206206994597C13D831ec7);
     }
 
-    function initialize_rinkeby(address _governor) public {
-        initialize(_governor);
+    function initialize_rinkeby() public {
+        initialize();
 
         // rinkeby
         config[BotToken] = uint(0x5E26FA0FE067d28aae8aFf2fB85Ac2E693BD9EfA);
         config[UsdtToken] = uint(0x101194a3FF67f83A05B3E15AfA52D45D588614ca);
     }
 
-    function initialize_bsc(address _governor) public {
-        initialize(_governor);
+    function initialize_bsc() public {
+        initialize();
 
         config[EnableUniSwap] = 0;
         config[BotToken] = uint(0x1188d953aFC697C031851169EEf640F23ac8529C);
         config[UsdtToken] = uint(0x55d398326f99059fF775485246999027B3197955); // BUSD-T
     }
 
-    function initialize_okex(address _governor) public {
-        initialize(_governor);
+    function initialize_okex() public {
+        initialize();
 
         config[EnableUniSwap] = 0;
         config[MinValueOfBotHolder] = 0 ether;
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) public payable lock {
+    function create(CreateReq memory poolReq, address[] memory whitelist_) public payable nonReentrant {
         uint index = pools.length;
         require(poolReq.token0 != poolReq.token1, "token0 and token1 is same");
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
@@ -185,7 +183,7 @@ contract BounceFixedSwap is Configurable {
     }
 
     function swap(uint index, uint amount1) external payable
-        lock
+        nonReentrant
         isPoolExist(index)
         isPoolNotClosed(index)
         checkBotHolder(index)
@@ -274,7 +272,7 @@ contract BounceFixedSwap is Configurable {
     }
 
     function creatorClaim(uint index) external
-        lock
+        nonReentrant
         isPoolExist(index)
     {
         Pool memory pool = pools[index];
@@ -302,7 +300,7 @@ contract BounceFixedSwap is Configurable {
     }
 
     function userClaim(uint index) external
-        lock
+        nonReentrant
         isPoolExist(index)
     {
         Pool memory pool = pools[index];
@@ -328,17 +326,17 @@ contract BounceFixedSwap is Configurable {
         }
     }
 
-    function addWhitelist(uint index, address[] memory whitelist_) public governance {
+    function addWhitelist(uint index, address[] memory whitelist_) public onlyOwner {
         _addWhitelist(index, whitelist_);
     }
 
-    function removeWhitelist(uint index, address[] memory whitelist_) external governance {
+    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
         for (uint i = 0; i < whitelist_.length; i++) {
             delete whitelistP[index][whitelist_[i]];
         }
     }
 
-    function setUniswapV2Router(address router_) external governance {
+    function setUniswapV2Router(address router_) external onlyOwner {
         config[UniswapV2Router02] = uint(router_);
     }
 
@@ -432,12 +430,5 @@ contract BounceFixedSwap is Configurable {
             );
         }
         _;
-    }
-
-    modifier lock() {
-        require(unlocked == 1, 'LOCKED');
-        unlocked = 0;
-        _;
-        unlocked = 1;
     }
 }

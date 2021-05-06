@@ -6,10 +6,11 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 import "./Governable.sol";
 //import "./interfaces/IBounceStake.sol";
 
-contract BounceDutchAuction is Configurable {
+contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -89,15 +90,12 @@ contract BounceDutchAuction is Configurable {
     // pool index => account => whether or not allow swap
     mapping(uint => mapping(address => bool)) public whitelistP;
 
-    uint unlocked;
-
     event Created(uint indexed index, address indexed sender, Pool pool);
     event Bid(uint indexed index, address indexed sender, uint amount0, uint amount1);
     event Claimed(uint indexed index, address indexed sender, uint unFilledAmount0);
 
-    function initialize(address _governor) override public {
-        super.initialize(_governor);
-        unlocked = 1;
+    function initialize() public initializer {
+        super.__Ownable_init();
 
         config[TxFeeRatio] = 0.02 ether;
         config[MinValueOfBotHolder] = 0.5 ether;
@@ -105,15 +103,15 @@ contract BounceDutchAuction is Configurable {
         config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
     }
 
-    function initialize_rinkeby(address _governor) public {
-        initialize(_governor);
+    function initialize_rinkeby() public {
+        initialize();
 
         config[BotToken] = uint(0x5E26FA0FE067d28aae8aFf2fB85Ac2E693BD9EfA);
         config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) public payable
-        lock
+        nonReentrant
         isPoolNotCreate(poolReq.creator)
     {
         require(poolReq.amountTotal0 != 0, "the value of amountTotal0 is zero");
@@ -175,7 +173,7 @@ contract BounceDutchAuction is Configurable {
         // amount of token1
         uint amount1
     ) external payable
-        lock
+        nonReentrant
         isPoolExist(index)
         checkBotHolder(index)
         isPoolNotClosed(index)
@@ -212,7 +210,7 @@ contract BounceDutchAuction is Configurable {
     }
 
     function creatorClaim(uint index) external
-        lock
+        nonReentrant
         isPoolExist(index)
         isPoolClosed(index)
     {
@@ -254,7 +252,7 @@ contract BounceDutchAuction is Configurable {
     }
 
     function bidderClaim(uint index) external
-        lock
+        nonReentrant
         isPoolExist(index)
         isPoolClosed(index)
     {
@@ -394,12 +392,5 @@ contract BounceDutchAuction is Configurable {
     modifier isPoolExist(uint index) {
         require(index < pools.length, "this pool does not exist");
         _;
-    }
-
-    modifier lock() {
-        require(unlocked == 1, 'LOCKED');
-        unlocked = 0;
-        _;
-        unlocked = 1;
     }
 }
