@@ -96,6 +96,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
 
     function initialize() public initializer {
         super.__Ownable_init();
+        super.__ReentrancyGuard_init();
 
         config[TxFeeRatio] = 0.02 ether;
         config[MinValueOfBotHolder] = 0.5 ether;

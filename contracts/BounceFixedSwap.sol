@@ -103,6 +103,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
     function initialize() public initializer {
         super.__Ownable_init();
+        super.__ReentrancyGuard_init();
 
         config[TxFeeRatio] = 0.015 ether;
         config[MinValueOfBotHolder] = 60 ether;

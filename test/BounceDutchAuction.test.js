@@ -29,8 +29,8 @@ describe('BounceDutchAuction', function () {
         this.usdToken = await USDT.new(usd('500000'), 'USD Token', 'USDT', 6, { from: owner });
 
         // initialize Bounce contract
-        await this.da.initialize(governor, { from: governor });
-        await expectRevert(this.da.initialize(owner, { from: owner }), 'Contract instance has already been initialized.');
+        await this.da.initialize({ from: governor });
+        await expectRevert(this.da.initialize({ from: owner }), 'Contract instance has already been initialized.');
         await this.da.setConfig(web3.utils.fromAscii("DAV2P::TxFeeRatio"), ether('0.02'), { from: governor });
         await this.da.setConfig(web3.utils.fromAscii("DAV2P::MinValueOfBotHolder"), ether('0.1'), { from: governor });
         await this.da.setConfig(web3.utils.fromAscii("DAV2P::BotToken"), this.erc20Token.address, { from: governor });

@@ -29,8 +29,8 @@ describe('BounceSealedBid', function () {
         this.usdToken = await USDT.new(usd('500000'), 'USD Token', 'USDT', 6, { from: owner });
 
         // initialize Bounce contract
-        await this.sb.initialize(governor, { from: governor });
-        await expectRevert(this.sb.initialize(owner, { from: owner }), 'Contract instance has already been initialized');
+        await this.sb.initialize({ from: governor });
+        await expectRevert(this.sb.initialize({ from: owner }), 'Contract instance has already been initialized');
         await this.sb.setConfig(web3.utils.fromAscii("SBP::TxFeeRatio"), ether('0.02'), { from: governor });
         await this.sb.setConfig(web3.utils.fromAscii("SBP::MaxBidCount"), 1000, { from: governor });
         await this.sb.setConfig(web3.utils.fromAscii("SBP::MinValueOfBotHolder"), ether('0.5'), { from: governor });

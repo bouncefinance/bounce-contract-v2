@@ -34,13 +34,13 @@ describe('BounceFixedSwap', function () {
         this.uniswapV2Router02 = await UniswapV2Router02.new(this.uniswapV2Factory.address, this.weth.address, { from: owner });
 
         // initialize Bounce contract
-        await this.fs.initialize(owner, { from: owner });
-        await expectRevert(this.fs.initialize(owner, { from: owner }), 'Contract instance has already been initialized');
+        await this.fs.initialize({ from: owner });
+        await expectRevert(this.fs.initialize({ from: owner }), 'Contract instance has already been initialized');
         await this.fs.setConfig(web3.utils.fromAscii("BPRO::BotToken"), this.erc20Token.address, { from: owner });
         await this.fs.setConfig(web3.utils.fromAscii("BPRO::UsdtToken"), this.usdToken.address, { from: owner });
         await expectRevert.unspecified(this.fs.setConfig(web3.utils.fromAscii("BPRO::TxFeeRatio"), ether('0.015'), { from: governor }));
-        await expectRevert.unspecified(this.fs.transferGovernorship(governor, { from: governor }));
-        await this.fs.transferGovernorship(governor, { from: owner });
+        await expectRevert.unspecified(this.fs.transferOwnership(governor, { from: governor }));
+        await this.fs.transferOwnership(governor, { from: owner });
         await expectRevert.unspecified(this.fs.setConfig(web3.utils.fromAscii("BPRO::TxFeeRatio"), ether('0.015'), { from: owner }));
         expect(await this.fs.getTxFeeRatio()).to.be.bignumber.equal(ether('0.015'));
         expect(await this.fs.getMinValueOfBotHolder()).to.be.bignumber.equal(ether('60'));
