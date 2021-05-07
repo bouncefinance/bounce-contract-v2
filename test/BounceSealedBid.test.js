@@ -59,6 +59,7 @@ describe('BounceSealedBid', function () {
 
     describe('create sealed bid pool ERC20/ETH', function () {
         beforeEach(async function () {
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = ZERO_ADDRESS;
             const amountTotal0 = ether('20');
@@ -69,11 +70,12 @@ describe('BounceSealedBid', function () {
             const minEthPerWallet = ether('0.1');
             const index = 0;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountMin1, duration, openAt, onlyBot, minEthPerWallet
+                name, creator, token0, token1, amountTotal0, amountMin1, duration, openAt, onlyBot, minEthPerWallet
             ];
             await this.erc20Token.approve(this.sb.address, amountTotal0, { from: creator });
             await this.sb.create(createReq, [], { from: creator });
             const pool = await this.sb.pools(index);
+            expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
             expect(pool.token0).to.equal(token0);
             expect(pool.token1).to.equal(token1);
@@ -322,6 +324,7 @@ describe('BounceSealedBid', function () {
 
     describe('create sealed bid pool ERC20/USDT', function () {
         beforeEach(async function () {
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = this.usdToken.address;
             const amountTotal0 = ether('20');
@@ -332,11 +335,12 @@ describe('BounceSealedBid', function () {
             const minEthPerWallet = usd('0.1');
             const index = 0;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountMin1, duration, openAt, onlyBot, minEthPerWallet
+                name, creator, token0, token1, amountTotal0, amountMin1, duration, openAt, onlyBot, minEthPerWallet
             ];
             await this.erc20Token.approve(this.sb.address, amountTotal0, { from: creator });
             await this.sb.create(createReq, [], { from: creator });
             const pool = await this.sb.pools(index);
+            expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
             expect(pool.token0).to.equal(token0);
             expect(pool.token1).to.equal(token1);

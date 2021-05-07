@@ -89,6 +89,7 @@ describe('BounceFixedSwap', function () {
     });
 
     it('when create with whitelist should be ok', async function () {
+        const name = 'Auction';
         const token0 = this.erc20Token.address;
         const token1 = ZERO_ADDRESS;
         const amountTotal0 = ether('10');
@@ -105,7 +106,7 @@ describe('BounceFixedSwap', function () {
         }
         whitelist.push(buyer);
         const createReq = [
-            creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+            name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
             claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
         ];
         const index = 0;
@@ -126,6 +127,7 @@ describe('BounceFixedSwap', function () {
 
     describe('create swap pool ERC20/ETH', function () {
         beforeEach(async function () {
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = ZERO_ADDRESS;
             const amountTotal0 = ether('10');
@@ -137,13 +139,14 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('100');
             const enableWhiteList = true;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             const index = 0;
             await this.erc20Token.approve(this.fs.address, amountTotal0, { from: creator });
             await this.fs.create(createReq, [buyer], { from: creator });
             const pool = await this.fs.pools(index);
+            expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
             expect(pool.token0).to.equal(token0);
             expect(pool.token1).to.equal(token1);
@@ -297,6 +300,7 @@ describe('BounceFixedSwap', function () {
 
     describe('create swap pool ERC20/USDT', function () {
         beforeEach(async function () {
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = this.usdToken.address;
             const amountTotal0 = ether('10');
@@ -308,7 +312,7 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('0');
             const enableWhiteList = true;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             const index = 0;
@@ -316,6 +320,7 @@ describe('BounceFixedSwap', function () {
             await this.erc20Token.approve(this.fs.address, amountTotal0, { from: creator });
             await this.fs.create(createReq, whitelist, { from: creator });
             const pool = await this.fs.pools(index);
+            expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
             expect(pool.token0).to.equal(token0);
             expect(pool.token1).to.equal(token1);
@@ -420,6 +425,7 @@ describe('BounceFixedSwap', function () {
 
         it('when create twice', async function() {
             await time.increase(time.duration.hours(1));
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = this.usdToken.address;
             const amountTotal0 = ether('10');
@@ -431,7 +437,7 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('10');
             const enableWhiteList = false;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             await this.erc20Token.approve(this.fs.address, amountTotal0, { from: creator });

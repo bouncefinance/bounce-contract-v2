@@ -60,6 +60,7 @@ describe('BounceDutchAuction', function () {
 
     describe('create dutch auction pool ERC20/ETH', function () {
         beforeEach(async function () {
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = ZERO_ADDRESS;
             const amountTotal0 = ether('20');
@@ -71,11 +72,12 @@ describe('BounceDutchAuction', function () {
             const onlyBot = true;
             const index = 0;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, duration, openAt, onlyBot,
+                name, creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, duration, openAt, onlyBot,
             ];
             await this.erc20Token.approve(this.da.address, amountTotal0, { from: creator });
             await this.da.create(createReq, [], { from: creator });
             const pool = await this.da.pools(index);
+            expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
             expect(pool.token0).to.equal(token0);
             expect(pool.token1).to.equal(token1);
@@ -202,6 +204,7 @@ describe('BounceDutchAuction', function () {
 
     describe('create dutch auction pool ERC20/USDT', function () {
         beforeEach(async function () {
+            const name = 'Auction';
             const token0 = this.erc20Token.address;
             const token1 = this.usdToken.address;
             const amountTotal0 = ether('20');
@@ -213,11 +216,12 @@ describe('BounceDutchAuction', function () {
             const onlyBot = true;
             const index = 0;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, duration, openAt, onlyBot,
+                name, creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, duration, openAt, onlyBot,
             ];
             await this.erc20Token.approve(this.da.address, amountTotal0, { from: creator });
             await this.da.create(createReq, [], { from: creator });
             const pool = await this.da.pools(index);
+            expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
             expect(pool.token0).to.equal(token0);
             expect(pool.token1).to.equal(token1);

@@ -26,6 +26,8 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     address internal constant DeadAddress           = 0x000000000000000000000000000000000000dEaD;
 
     struct CreateReq {
+        // pool name
+        string name;
         // creator of the pool
         address payable creator;
         // address of sell token
@@ -48,6 +50,8 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     struct Pool {
+        // pool name
+        string name;
         // creator of the pool
         address payable creator;
         // address of sell token
@@ -145,6 +149,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
         require(poolReq.duration != 0, "invalid duration");
+        require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         if (poolReq.maxEthPerWallet != 0) {
             maxEthPerWalletP[index] = poolReq.maxEthPerWallet;
@@ -167,6 +172,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         _addWhitelist(index, whitelist_);
 
         Pool memory pool;
+        pool.name = poolReq.name;
         pool.creator = poolReq.creator;
         pool.token0 = poolReq.token0;
         pool.token1 = poolReq.token1;

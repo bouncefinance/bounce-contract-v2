@@ -21,6 +21,8 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     bytes32 internal constant StakeContract  =          bytes32("SBP::StakeContract");
 
     struct CreateReq {
+        // pool name
+        string name;
         // creator of the pool
         address payable creator;
         // address of sell token
@@ -40,6 +42,8 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     struct Pool {
+        // pool name
+        string name;
         // creator of the pool
         address payable creator;
         // address of token0
@@ -129,6 +133,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.amountMin1 != 0, "the value of amountMin1 is zero");
         require(poolReq.duration != 0, "the value of duration is zero");
         require(poolReq.duration <= 7 days, "the value of duration is exceeded 30 days");
+        require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         uint index = pools.length;
 
@@ -152,6 +157,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
 
         // creator pool
         Pool memory pool;
+        pool.name = poolReq.name;
         pool.creator = poolReq.creator;
         pool.token0 = poolReq.token0;
         pool.token1 = poolReq.token1;
