@@ -7,7 +7,7 @@ const { ZERO_ADDRESS } = constants;
 // Load compiled artifacts
 const BounceDutchAuction = contract.fromArtifact('BounceDutchAuction');
 const ERC20 = contract.fromArtifact('@openzeppelin/contracts/ERC20PresetMinterPauser');
-// const BounceStake = contract.fromArtifact('BounceStakeSimple');
+const BounceStake = contract.fromArtifact(require('path').resolve('test/BounceStakeSimple'));
 const USDT = contract.fromArtifact(require('path').resolve('test/TetherToken'));
 
 function usd (n) {
@@ -22,7 +22,7 @@ describe('BounceDutchAuction', function () {
         // Deploy BounceDutchAuction contract for each test
         this.da = await BounceDutchAuction.new({ from: owner });
         // Deploy Bounce Stake contract for each test
-        // this.bounceStake = await BounceStake.new({ from: owner });
+        this.bounceStake = await BounceStake.new({ from: owner });
 
         // Deploy a ERC20 contract for each test
         this.erc20Token = await ERC20.new('Bounce Token', 'BOT', { from: owner });
@@ -34,14 +34,14 @@ describe('BounceDutchAuction', function () {
         await this.da.setConfig(web3.utils.fromAscii("DAV2P::TxFeeRatio"), ether('0.02'), { from: governor });
         await this.da.setConfig(web3.utils.fromAscii("DAV2P::MinValueOfBotHolder"), ether('0.1'), { from: governor });
         await this.da.setConfig(web3.utils.fromAscii("DAV2P::BotToken"), this.erc20Token.address, { from: governor });
-        // await this.da.setConfig(web3.utils.fromAscii("DAV2P::StakeContract"), this.bounceStake.address, { from: governor });
+        await this.da.setConfig(web3.utils.fromAscii("DAV2P::StakeContract"), this.bounceStake.address, { from: governor });
         await expectRevert.unspecified(
             this.da.setConfig(web3.utils.fromAscii("DAV2P::TxFeeRatio"), ether('0.02'), { from: owner })
         );
         expect(await this.da.getTxFeeRatio()).to.be.bignumber.equal(ether('0.02'));
         expect(await this.da.getMinValueOfBotHolder()).to.be.bignumber.equal(ether('0.1'));
         expect(await this.da.getBotToken()).to.equal(this.erc20Token.address);
-        // expect(await this.da.getStakeContract()).to.equal(this.bounceStake.address);
+        expect(await this.da.getStakeContract()).to.equal(this.bounceStake.address);
 
         // mint BOT token
         await this.erc20Token.mint(this.da.address, ether('10000'), { from: owner });

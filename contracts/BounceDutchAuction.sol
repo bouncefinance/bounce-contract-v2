@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 import "./Governable.sol";
-//import "./interfaces/IBounceStake.sol";
+import "./interfaces/IBounceStake.sol";
 
 contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
@@ -248,7 +248,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
                 }
                 if (txFee > 0) {
                     // deposit transaction fee to staking contract
-//                    IBounceStake(getStakeContract()).depositReward{value: txFee}();
+                    IBounceStake(getStakeContract()).depositReward{value: txFee}();
                 }
             } else {
                 IERC20(pool.token1).safeTransfer(pool.creator, amount1);

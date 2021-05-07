@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/cryptography/ECDSA.so
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "./Governable.sol";
+import "./interfaces/IBounceStake.sol";
 
 contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint;
@@ -19,9 +20,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     bytes32 internal constant TxFeeRatio            = bytes32("BPRO::TxFeeRatio");
     bytes32 internal constant MinValueOfBotHolder   = bytes32("BPRO::MinValueOfBotHolder");
     bytes32 internal constant BotToken              = bytes32("BPRO::BotToken");
-    bytes32 internal constant UsdtToken             = bytes32("BPRO::UsdtToken");
-    bytes32 internal constant UniswapV2Router02     = bytes32("BPRO::UniswapV2Router02");
-    bytes32 internal constant EnableUniSwap         = bytes32("BPRO::EnableUniSwap");
+    bytes32 internal constant StakeContract         = bytes32("BPRO::StakeContract");
 
     address internal constant DeadAddress           = 0x000000000000000000000000000000000000dEaD;
 
@@ -111,12 +110,10 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
         config[TxFeeRatio] = 0.015 ether;
         config[MinValueOfBotHolder] = 60 ether;
-        config[EnableUniSwap] = 1;
 
         // mainnet
-        config[UniswapV2Router02] = uint(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         config[BotToken] = uint(0xA9B1Eb5908CfC3cdf91F9B8B3a74108598009096);
-        config[UsdtToken] = uint(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+        config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
     }
 
     function initialize_rinkeby() public {
@@ -124,22 +121,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
         // rinkeby
         config[BotToken] = uint(0x5E26FA0FE067d28aae8aFf2fB85Ac2E693BD9EfA);
-        config[UsdtToken] = uint(0x101194a3FF67f83A05B3E15AfA52D45D588614ca);
-    }
-
-    function initialize_bsc() public {
-        initialize();
-
-        config[EnableUniSwap] = 0;
-        config[BotToken] = uint(0x1188d953aFC697C031851169EEf640F23ac8529C);
-        config[UsdtToken] = uint(0x55d398326f99059fF775485246999027B3197955); // BUSD-T
-    }
-
-    function initialize_okex() public {
-        initialize();
-
-        config[EnableUniSwap] = 0;
-        config[MinValueOfBotHolder] = 0 ether;
+        config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) public payable nonReentrant {
@@ -292,9 +274,8 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
         if (txFeeP[index] > 0) {
             if (pool.token1 == address(0)) {
-                swapETH2BotAndBurn(txFeeP[index]);
-            } else if (pool.token1 == getUsdtToken()) {
-                swapToken2BotAndBurn(getUsdtToken(), txFeeP[index]);
+                // deposit transaction fee to staking contract
+                IBounceStake(getStakeContract()).depositReward{value: txFeeP[index]}();
             }
         }
 
@@ -343,57 +324,6 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         }
     }
 
-    function setUniswapV2Router(address router_) external onlyOwner {
-        config[UniswapV2Router02] = uint(router_);
-    }
-
-    function swapETH2BotAndBurn(uint txFee) private {
-        if (getEnableUniSwap()) {
-            uint amountOutMin = 0;
-            address[] memory path = getPath();
-            address to = DeadAddress;
-            uint deadline = now.add(20 minutes);
-            IUniswapV2Router02(getUniswapV2Router()).swapExactETHForTokens{value: txFee}(amountOutMin, path, to, deadline);
-        }
-    }
-
-    function swapToken2BotAndBurn(address token, uint txFee) private {
-        if (getEnableUniSwap()) {
-            address router = getUniswapV2Router();
-            IERC20(token).safeApprove(router, txFee);
-            uint amountOutMin = 0;
-            address[] memory path = getPath2(token);
-            address to = DeadAddress;
-            uint deadline = now.add(20 minutes);
-            IUniswapV2Router02(router).swapExactTokensForTokens(txFee, amountOutMin, path, to, deadline);
-        }
-    }
-
-    function getPath() internal view returns (address[] memory) {
-        address[] memory path = new address[](2);
-        path[0] = IUniswapV2Router02(getUniswapV2Router()).WETH();
-        path[1] = getBotToken();
-
-        return path;
-    }
-
-    function getPath2(address token) internal view returns (address[] memory) {
-        address[] memory path = new address[](3);
-        path[0] = token;
-        path[1] = IUniswapV2Router02(getUniswapV2Router()).WETH();
-        path[2] = getBotToken();
-
-        return path;
-    }
-
-    function getEnableUniSwap() public view returns (bool) {
-        return config[EnableUniSwap] != 0;
-    }
-
-    function getUniswapV2Router() public view returns (address) {
-        return address(config[UniswapV2Router02]);
-    }
-
     function getPoolCount() public view returns (uint) {
         return pools.length;
     }
@@ -410,8 +340,8 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         return address(config[BotToken]);
     }
 
-    function getUsdtToken() public view returns (address) {
-        return address(config[UsdtToken]);
+    function getStakeContract() public view returns (address) {
+        return address(config[StakeContract]);
     }
 
     modifier isPoolClosed(uint index) {

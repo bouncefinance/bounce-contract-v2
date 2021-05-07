@@ -8,9 +8,7 @@ const { ZERO_ADDRESS } = constants;
 const BounceFixedSwap = contract.fromArtifact('BounceFixedSwap');
 const ERC20 = contract.fromArtifact('@openzeppelin/contracts/ERC20PresetMinterPauser');
 const USDT = contract.fromArtifact(require('path').resolve('test/TetherToken'));
-const WETH = contract.fromArtifact(require('path').resolve('test/WETH9'));
-const UniswapV2Factory = contract.fromArtifact(require('path').resolve('test/UniswapV2Factory'));
-const UniswapV2Router02 = contract.fromArtifact(require('path').resolve('test/UniswapV2Router02'));
+const BounceStake = contract.fromArtifact(require('path').resolve('test/BounceStakeSimple'));
 
 function usd (n) {
     return ether(n).div(new BN('10').pow(new BN('12')));
@@ -18,26 +16,23 @@ function usd (n) {
 
 // Start test block
 describe('BounceFixedSwap', function () {
-    const [ owner, setter, governor, creator, buyer, buyer2 ] = accounts;
+    const [ owner, governor, creator, buyer, buyer2 ] = accounts;
 
     beforeEach(async function () {
         // Deploy BounceFixedSwap contract for each test
         this.fs = await BounceFixedSwap.new({ from: owner });
+        // Deploy Bounce Stake contract for each test
+        this.bounceStake = await BounceStake.new({ from: owner });
 
         // Deploy a ERC20 contract for each test
         this.erc20Token = await ERC20.new('Bounce Token', 'BOT', { from: owner });
         this.usdToken = await USDT.new(usd('500000'), 'USD Token', 'USDT', 6, { from: owner });
 
-        // Deploy a uniswap contract for each test
-        this.weth = await WETH.new();
-        this.uniswapV2Factory = await UniswapV2Factory.new(setter, { from: owner });
-        this.uniswapV2Router02 = await UniswapV2Router02.new(this.uniswapV2Factory.address, this.weth.address, { from: owner });
-
         // initialize Bounce contract
         await this.fs.initialize({ from: owner });
         await expectRevert(this.fs.initialize({ from: owner }), 'Contract instance has already been initialized');
         await this.fs.setConfig(web3.utils.fromAscii("BPRO::BotToken"), this.erc20Token.address, { from: owner });
-        await this.fs.setConfig(web3.utils.fromAscii("BPRO::UsdtToken"), this.usdToken.address, { from: owner });
+        await this.fs.setConfig(web3.utils.fromAscii("BPRO::StakeContract"), this.bounceStake.address, { from: owner });
         await expectRevert.unspecified(this.fs.setConfig(web3.utils.fromAscii("BPRO::TxFeeRatio"), ether('0.015'), { from: governor }));
         await expectRevert.unspecified(this.fs.transferOwnership(governor, { from: governor }));
         await this.fs.transferOwnership(governor, { from: owner });
@@ -45,9 +40,7 @@ describe('BounceFixedSwap', function () {
         expect(await this.fs.getTxFeeRatio()).to.be.bignumber.equal(ether('0.015'));
         expect(await this.fs.getMinValueOfBotHolder()).to.be.bignumber.equal(ether('60'));
         expect(await this.fs.getBotToken()).to.equal(this.erc20Token.address);
-        expect(await this.fs.getUsdtToken()).to.equal(this.usdToken.address);
-        expect(await this.fs.getUniswapV2Router()).to.equal('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D');
-        expect(await this.fs.getEnableUniSwap()).to.equal(true);
+        expect(await this.fs.getStakeContract()).to.equal(this.bounceStake.address);
 
         // mint ERC20 token
         await this.erc20Token.mint(owner,  ether('10000'), { from: owner });
@@ -62,30 +55,6 @@ describe('BounceFixedSwap', function () {
         await this.usdToken.transfer(creator, usd('10000'), { from: owner });
         await this.usdToken.transfer(buyer, usd('10000'), { from: owner });
         await this.usdToken.transfer(buyer2, usd('10000'), { from: owner });
-
-        await this.fs.setUniswapV2Router(this.uniswapV2Router02.address, { from: governor });
-        expect(await this.fs.getUniswapV2Router()).to.equal(this.uniswapV2Router02.address);
-        let amountTokenDesired = ether('1');
-        let amountETHDesired = ether('1');
-        let amountTokenMin = ether('1');
-        let amountETHMin = ether('1');
-        const to = owner;
-        const deadline = (await time.latest()).add(time.duration.minutes(20));
-        await this.uniswapV2Factory.createPair(this.weth.address, this.erc20Token.address, { from: owner });
-        await this.erc20Token.approve(this.uniswapV2Router02.address, amountTokenDesired, { from: owner });
-        await this.uniswapV2Router02.addLiquidityETH(
-            this.erc20Token.address, amountTokenDesired, amountTokenMin, amountETHMin, to, deadline,
-            { from: owner, value: amountETHDesired }
-        );
-
-        amountTokenDesired = usd('1');
-        amountETHDesired = usd('1');
-        await this.uniswapV2Factory.createPair(this.weth.address, this.usdToken.address, { from: owner });
-        await this.usdToken.approve(this.uniswapV2Router02.address, amountTokenDesired, { from: owner });
-        await this.uniswapV2Router02.addLiquidityETH(
-            this.usdToken.address, amountTokenDesired, amountTokenMin, amountETHMin, to, deadline,
-            { from: owner, value: amountETHDesired }
-        );
     });
 
     it('when create with whitelist should be ok', async function () {

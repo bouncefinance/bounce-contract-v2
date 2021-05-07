@@ -8,7 +8,7 @@ const { MAX_UINT256, ZERO_ADDRESS } = constants;
 const BounceSealedBid = contract.fromArtifact('BounceSealedBid');
 const ERC20 = contract.fromArtifact('@openzeppelin/contracts/ERC20PresetMinterPauser');
 const USDT = contract.fromArtifact(require('path').resolve('test/TetherToken'));
-// const BounceStake = contract.fromArtifact('BounceStakeSimple');
+const BounceStake = contract.fromArtifact(require('path').resolve('test/BounceStakeSimple'));
 
 function usd (n) {
     return ether(n).div(new BN('10').pow(new BN('12')));
@@ -22,7 +22,7 @@ describe('BounceSealedBid', function () {
         // Deploy Bounce Sealed Bid contract for each test
         this.sb = await BounceSealedBid.new({ from: owner });
         // Deploy Bounce Stake contract for each test
-        // this.bounceStake = await BounceStake.new({ from: owner });
+        this.bounceStake = await BounceStake.new({ from: owner });
 
         // Deploy a ERC20 contract for each test
         this.erc20Token = await ERC20.new('Bounce Token', 'BOT', { from: owner });
@@ -35,12 +35,12 @@ describe('BounceSealedBid', function () {
         await this.sb.setConfig(web3.utils.fromAscii("SBP::MaxBidCount"), 1000, { from: governor });
         await this.sb.setConfig(web3.utils.fromAscii("SBP::MinValueOfBotHolder"), ether('0.5'), { from: governor });
         await this.sb.setConfig(web3.utils.fromAscii("SBP::BotToken"), this.erc20Token.address, { from: governor });
-        // await this.sb.setConfig(web3.utils.fromAscii("SBP::StakeContract"), this.bounceStake.address, { from: governor });
+        await this.sb.setConfig(web3.utils.fromAscii("SBP::StakeContract"), this.bounceStake.address, { from: governor });
         expect(await this.sb.getTxFeeRatio()).to.be.bignumber.equal(ether('0.02'));
         expect(await this.sb.getMinValueOfBotHolder()).to.be.bignumber.equal(ether('0.5'));
         expect(await this.sb.getMaxBidCount()).to.be.bignumber.equal(new BN('1000'));
         expect(await this.sb.getBotToken()).to.equal(this.erc20Token.address);
-        // expect(await this.sb.getStakeContract()).to.equal(this.bounceStake.address);
+        expect(await this.sb.getStakeContract()).to.equal(this.bounceStake.address);
 
         // mint BOT token
         await this.erc20Token.mint(this.sb.address, ether('10000'), { from: owner });
