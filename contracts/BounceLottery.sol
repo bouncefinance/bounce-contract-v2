@@ -13,30 +13,48 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    struct Pool {
-        uint poolId;
-        // address of pool creator
-        address payable creator;
+    struct CreateReq {
         // pool name
         string name;
-
+        // address of pool creator
+        address payable creator;
         address token0;
-        //uint  tokenId0;
-        uint amount0;
-
+        uint amountTotal0;
         // per share
         address token1;
-        uint amount1;
+        uint amountTotal1;
         uint maxPlayer;
         uint curPlayer;
         //uint nShare;
         //uint blockHeight;
-
         bool claim;
-
         uint duration;
         // the timestamp in seconds the pool will open
         uint openAt;
+        bool enableWhiteList;
+        uint nShare;
+    }
+
+    struct Pool {
+        uint poolId;
+        // pool name
+        string name;
+        // address of pool creator
+        address payable creator;
+        address token0;
+        uint amountTotal0;
+        // per share
+        address token1;
+        uint amountTotal1;
+        uint maxPlayer;
+        uint curPlayer;
+        //uint nShare;
+        //uint blockHeight;
+        bool claim;
+        uint duration;
+        // the timestamp in seconds the pool will open
+        uint openAt;
+        bool enableWhiteList;
     }
 
     struct PoolExt {
@@ -62,9 +80,12 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     // name => pool index
     mapping(string => uint) public name2Id;
 
+    // pool index => account => whether or not in white list
+    mapping(uint => mapping(address => bool)) public whitelistP;
+
     event Created(Pool pool);
-    event Bet(address sender, uint poolId);
-    event Claimed(address sender, uint poolId);
+    event Bet(address sender, uint index);
+    event Claimed(address sender, uint index);
 
     function initialize() public initializer {
         super.__Ownable_init();
@@ -78,86 +99,85 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
                 config[BounceContract] = uint(0x73282A63F0e3D7e9604575420F777361ecA3C86A);*/
     }
 
-    function create(
-        string memory name,
-        address token0,
-        uint amount0,
-        address token1,
-        uint amount1,
-        uint maxPlayer,
-        uint nShare,
-    //uint256 curPlayer;
-    //bool claim;
-    //uint startTime;
-        uint duration,
-        uint openAt
-    ) public payable
-    nonReentrant
-    nameNotBeenToken(name)
+    function create(CreateReq memory poolReq, address[] memory whitelist_) public payable
+        nonReentrant
+        nameNotBeenToken(poolReq.name)
     {
-        address payable creator = msg.sender;
-        require(amount0 >= nShare, "amount0 less than nShare");
-        require(amount1 != 0, "the value of amount1 is zero");
-        require(nShare != 0, "the value of nShare is zero");
-        require(nShare <= maxPlayer, "max player less than nShare");
-        require(maxPlayer < 65536, "max player must less 65536");
-        require(maxPlayer > 0, "the value of amount1 is zero");
-        require(duration != 0, "the value of duration is zero");
-        require(duration <= 30 days, "the value of duration is exceeded 30 days");
-        require(bytes(name).length <= 15, "the length of name is too long");
+        require(poolReq.amountTotal0 >= poolReq.nShare, "amountTotal0 less than nShare");
+        require(poolReq.amountTotal1 != 0, "the value of amountTotal1 is zero");
+        require(poolReq.nShare != 0, "the value of nShare is zero");
+        require(poolReq.nShare <= poolReq.maxPlayer, "max player less than nShare");
+        require(poolReq.maxPlayer < 65536, "max player must less 65536");
+        require(poolReq.maxPlayer > 0, "the value of maxPlayer is zero");
+        require(poolReq.duration != 0, "the value of duration is zero");
+        require(poolReq.duration <= 30 days, "the value of duration is exceeded 30 days");
+        require(bytes(poolReq.name).length <= 15, "the length of name is too long");
 
-        // transfer token0 to this contract
-        IERC20(token0).safeTransferFrom(creator, address(this), amount0);
+        uint index = pools.length;
+
+        // transfer amount of token0 to this contract
+        IERC20  _token0 = IERC20(poolReq.token0);
+        uint token0BalanceBefore = _token0.balanceOf(address(this));
+        _token0.safeTransferFrom(poolReq.creator, address(this), poolReq.amountTotal0);
+        require(
+            _token0.balanceOf(address(this)).sub(token0BalanceBefore) == poolReq.amountTotal0,
+            "not support deflationary token"
+        );
+        // reset allowance to 0
+        _token0.safeApprove(address(this), 0);
+
+        _addWhitelist(index, whitelist_);
+
         // creator pool
         Pool memory pool;
-        pool.creator = creator;
-        pool.name = name;
-        pool.token0 = token0;
-        pool.amount0 = amount0;
-        pool.token1 = token1;
-        pool.amount1 = amount1;
-        pool.maxPlayer = maxPlayer;
-        pool.duration = duration;
-        pool.openAt = openAt;
+        pool.creator = poolReq.creator;
+        pool.name = poolReq.name;
+        pool.token0 = poolReq.token0;
+        pool.amountTotal0 = poolReq.amountTotal0;
+        pool.token1 = poolReq.token1;
+        pool.amountTotal1 = poolReq.amountTotal1;
+        pool.maxPlayer = poolReq.maxPlayer;
+        pool.duration = poolReq.duration;
+        pool.openAt = poolReq.openAt;
+        pool.enableWhiteList = poolReq.enableWhiteList;
         //pool.nShare = nShare;
 
-        uint poolId = pools.length + 1;
-        pool.poolId = poolId;
+        pool.poolId = index;
         pool.curPlayer = 0;
         pool.claim = false;
         pools.push(pool);
-        myCreate[creator].push(poolId);
-        name2Id[name] = poolId;
-        poolsExt[poolId].nShare = nShare;
+        myCreate[poolReq.creator].push(index);
+        name2Id[poolReq.name] = index;
+        poolsExt[index].nShare = poolReq.nShare;
 
         emit Created(pool);
     }
 
-    function getLotteryPoolInfo(uint poolId) public view returns (string memory name, address token0, uint amount0, address token1, uint amount1, uint maxPlayer, uint nShare, uint duration, uint closeTime){
-        require((poolId > 0) && (poolId <= pools.length), "No pool ID");
-        Pool memory pool = pools[poolId - 1];
+    function getLotteryPoolInfo(uint index) public view returns (string memory name, address token0, uint amountTotal0, address token1, uint amountTotal1, uint maxPlayer, uint nShare, uint duration, uint closeTime){
+        require(index < pools.length, "No pool ID");
+        Pool memory pool = pools[index];
         name = pool.name;
         token0 = pool.token0;
-        amount0 = pool.amount0;
+        amountTotal0 = pool.amountTotal0;
         token1 = pool.token1;
-        amount1 = pool.amount1;
+        amountTotal1 = pool.amountTotal1;
         maxPlayer = pool.maxPlayer;
-        nShare = poolsExt[poolId].nShare;
+        nShare = poolsExt[index].nShare;
         duration = pool.duration;
         closeTime = pool.openAt.add(pool.duration);
     }
 
-    function getPlayerStatus(uint poolId) public view returns (uint){
-        require((poolId > 0) && (poolId <= pools.length), "No pool ID");
-        Pool memory pool = pools[poolId - 1];
+    function getPlayerStatus(uint index) public view returns (uint) {
+        require(index < pools.length, "No pool ID");
+        Pool memory pool = pools[index];
         if (pool.creator == msg.sender) {
             if (pool.claim) {
                 return uint(5);
             }
             return uint(1);
         }
-        if (allPlayer[poolId][msg.sender] != 0) {
-            if (allPlayerClaim[poolId][msg.sender]) {
+        if (allPlayer[index][msg.sender] != 0) {
+            if (allPlayerClaim[index][msg.sender]) {
                 return uint(6);
             }
             return uint(2);
@@ -166,102 +186,103 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     function bet(
-        uint poolId
+        uint index
     ) external payable
-    nonReentrant
-    isPoolExist(poolId)
-    isPoolNotClosed(poolId)
+        nonReentrant
+        isPoolExist(index)
+        isPoolNotClosed(index)
     {
         address payable sender = msg.sender;
         uint ethAmount1 = msg.value;
-        uint index = poolId - 1;
         Pool memory pool = pools[index];
-        require(allPlayer[poolId][sender] == 0, "You have already bet");
+        require(allPlayer[index][sender] == 0, "You have already bet");
+
+        if (pool.enableWhiteList) {
+            require(whitelistP[index][sender], "sender not in whitelist");
+        }
 
         //require(pool.creator != sender, "creator can't bid the pool created by self");
 
         require(pool.curPlayer < pool.maxPlayer, "Player has reached the upper limit");
         if (pool.token1 == address(0)) {
-            require(ethAmount1 >= pool.amount1, "The bet amount is too low");
+            require(ethAmount1 >= pool.amountTotal1, "The bet amount is too low");
         } else {
-            IERC20(pool.token1).safeTransferFrom(sender, address(this), pool.amount1);
+            IERC20(pool.token1).safeTransferFrom(sender, address(this), pool.amountTotal1);
         }
-        allPlayer[poolId][sender] = pools[index].curPlayer + 1;
+        allPlayer[index][sender] = pools[index].curPlayer + 1;
         pools[index].curPlayer += 1;
 
-        myPlay[sender].push(poolId);
+        myPlay[sender].push(index);
 
-        poolsExt[poolId].lastHash = uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty, blockhash(block.number - 1))));
+        poolsExt[index].lastHash = uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty, blockhash(block.number - 1))));
 
-        emit Bet(sender, poolId);
+        emit Bet(sender, index);
     }
 
-    function creatorClaim(uint poolId) external
-    nonReentrant
-    isPoolExist(poolId)
-    isPoolClosed(poolId)
+    function creatorClaim(uint index) external
+        nonReentrant
+        isPoolExist(index)
+        isPoolClosed(index)
     {
         address payable sender = msg.sender;
-        uint index = poolId - 1;
-        require(isCreator(sender, poolId), "sender is not pool creator");
+        require(isCreator(sender, index), "sender is not pool creator");
 
         Pool memory pool = pools[index];
         require(!pool.claim, "creator has claimed this pool");
 
         pools[index].claim = true;
         if (pool.curPlayer == 0) {
-            IERC20(pool.token0).safeTransfer(sender, pool.amount0);
-            emit Claimed(sender, poolId);
+            IERC20(pool.token0).safeTransfer(sender, pool.amountTotal0);
+            emit Claimed(sender, index);
             return;
         }
-        uint nShare = poolsExt[poolId].nShare;
+        uint nShare = poolsExt[index].nShare;
         uint hitShare = (pool.curPlayer > nShare ? nShare : pool.curPlayer);
         if (pool.token1 == address(0)) {
-            sender.transfer(pool.amount1.mul(hitShare));
+            sender.transfer(pool.amountTotal1.mul(hitShare));
         } else {
-            IERC20(pool.token1).safeTransfer(sender, pool.amount1.mul(hitShare));
+            IERC20(pool.token1).safeTransfer(sender, pool.amountTotal1.mul(hitShare));
         }
         if (nShare > pool.curPlayer) {
-            IERC20(pool.token0).safeTransfer(sender, pool.amount0.div(nShare).mul(nShare.sub(pool.curPlayer)));
+            IERC20(pool.token0).safeTransfer(sender, pool.amountTotal0.div(nShare).mul(nShare.sub(pool.curPlayer)));
         }
 
-        emit Claimed(sender, poolId);
+        emit Claimed(sender, index);
     }
 
-    function playerClaim(uint poolId) external
-    nonReentrant
-    isPoolExist(poolId)
-    isPoolClosed(poolId)
+    function playerClaim(uint index) external
+        nonReentrant
+        isPoolExist(index)
+        isPoolClosed(index)
     {
         address payable sender = msg.sender;
-        uint index = poolId - 1;
-        require(allPlayer[poolId][sender] > 0, "You haven't bet yet");
-        require(!isCreator(sender, poolId), "sender is pool creator");
+        require(allPlayer[index][sender] > 0, "You haven't bet yet");
+        require(!isCreator(sender, index), "sender is pool creator");
 
         Pool memory pool = pools[index];
 
-        require(!allPlayerClaim[poolId][sender], "You have claimed this pool");
+        require(!allPlayerClaim[index][sender], "You have claimed this pool");
         require(pool.openAt.add(pool.duration) < now, "It's not time to start the prize");
-        allPlayerClaim[poolId][sender] = true;
+        allPlayerClaim[index][sender] = true;
 
-        if (isWinner(poolId, address(sender))) {
-            IERC20(pool.token0).safeTransfer(sender, pool.amount0.div(poolsExt[poolId].nShare));
+        if (isWinner(index, address(sender))) {
+            IERC20(pool.token0).safeTransfer(sender, pool.amountTotal0.div(poolsExt[index].nShare));
         } else {
             if (pool.token1 == address(0)) {
-                sender.transfer(pool.amount1);
+                sender.transfer(pool.amountTotal1);
             } else {
-                IERC20(pool.token1).safeTransfer(sender, pool.amount1);
+                IERC20(pool.token1).safeTransfer(sender, pool.amountTotal1);
             }
         }
-        emit Claimed(sender, poolId);
+        emit Claimed(sender, index);
     }
 
     function getPoolCount() external view returns (uint) {
         return pools.length;
     }
 
-    function isCreator(address target, uint poolId) private view returns (bool) {
-        if (pools[poolId - 1].creator == target) {
+    function isCreator(address target, uint index) private view returns (bool) {
+        if (pools[index].creator == target) {
             return true;
         }
         return false;
@@ -291,52 +312,68 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         return (index.mul(p[nSel])) % m;
     }
 
-    function isWinner(uint poolId, address sender) public view returns (bool) {
-        require(pools[poolId - 1].openAt.add(pools[poolId - 1].duration) < now, "It's not time to start the prize");
-        if (allPlayer[poolId][sender] == 0) {
+    function isWinner(uint index, address sender) public view returns (bool) {
+        require(pools[index].openAt.add(pools[index].duration) < now, "It's not time to start the prize");
+        if (allPlayer[index][sender] == 0) {
             return false;
         }
-        uint nShare = poolsExt[poolId].nShare;
-        uint curPlayer = pools[poolId - 1].curPlayer;
+        uint nShare = poolsExt[index].nShare;
+        uint curPlayer = pools[index].curPlayer;
 
         if (curPlayer <= nShare) {
             return true;
         }
 
-        uint index = poolsExt[poolId].lastHash % curPlayer;
+        uint n = poolsExt[index].lastHash % curPlayer;
 
-        uint pos = calcRet(allPlayer[poolId][sender] - 1, curPlayer);
+        uint pos = calcRet(allPlayer[index][sender] - 1, curPlayer);
 
-        if ((index.add(nShare)) % curPlayer > index) {
-            if ((pos >= index) && (pos < (index + nShare))) {
+        if ((n.add(nShare)) % curPlayer > n) {
+            if ((pos >= n) && (pos < (n + nShare))) {
                 return true;
             }
         } else {
-            if ((pos >= index) && (pos < curPlayer)) {
+            if ((pos >= n) && (pos < curPlayer)) {
                 return true;
             }
-            if (pos < (index.add(nShare)) % curPlayer) {
+            if (pos < (n.add(nShare)) % curPlayer) {
                 return true;
             }
         }
         return false;
     }
 
-    modifier isPoolClosed(uint id) {
-        if (pools[id - 1].openAt.add(pools[id - 1].duration) <= now) {
+    function _addWhitelist(uint index, address[] memory whitelist_) private {
+        for (uint i = 0; i < whitelist_.length; i++) {
+            whitelistP[index][whitelist_[i]] = true;
+        }
+    }
+
+    function addWhitelist(uint index, address[] memory whitelist_) public onlyOwner {
+        _addWhitelist(index, whitelist_);
+    }
+
+    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        for (uint i = 0; i < whitelist_.length; i++) {
+            delete whitelistP[index][whitelist_[i]];
+        }
+    }
+
+    modifier isPoolClosed(uint index) {
+        if (pools[index].openAt.add(pools[index].duration) <= now) {
             _;
         } else {
             revert("this pool is not closed");
         }
     }
 
-    modifier isPoolNotClosed(uint id) {
-        require(pools[id - 1].openAt.add(pools[id - 1].duration) > now, "this pool is closed");
+    modifier isPoolNotClosed(uint index) {
+        require(pools[index].openAt.add(pools[index].duration) > now, "this pool is closed");
         _;
     }
 
-    modifier isPoolExist(uint id) {
-        require(id <= pools.length, "this pool does not exist");
+    modifier isPoolExist(uint index) {
+        require(index < pools.length, "this pool does not exist");
         _;
     }
 
