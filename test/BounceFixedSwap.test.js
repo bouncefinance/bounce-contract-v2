@@ -75,7 +75,7 @@ describe('BounceFixedSwap', function () {
         }
         whitelist.push(buyer);
         const createReq = [
-            name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+            name, token0, token1, amountTotal0, amountTotal1, duration, openAt,
             claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
         ];
         const index = 0;
@@ -108,7 +108,7 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('100');
             const enableWhiteList = true;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                name, token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             const index = 0;
@@ -127,7 +127,6 @@ describe('BounceFixedSwap', function () {
             expect(await this.fs.onlyBotHolderP(index)).to.equal(onlyBot);
             expect(await this.fs.maxEthPerWalletP(index)).to.be.bignumber.equal(maxEthPerWallet);
             expect(await this.fs.getPoolCount()).to.be.bignumber.equal(new BN('1'));
-            expect(await this.fs.teamPool(creator, index)).to.equal(true);
             expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9990'));
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10000'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10010'));
@@ -218,7 +217,7 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('1');
             const enableWhiteList = false;
             const createReq = [
-                creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             await this.erc20Token.approve(this.fs.address, amountTotal0, { from: creator });
@@ -257,9 +256,9 @@ describe('BounceFixedSwap', function () {
                     'this pool is not closed'
                 );
                 await time.increase(36000);
-                expect(await this.fs.teamClaimed(creator, index)).to.equal(false);
+                expect(await this.fs.creatorClaimed(creator, index)).to.equal(false);
                 await this.fs.creatorClaim(index, { from: creator });
-                expect(await this.fs.teamClaimed(creator, index)).to.equal(true);
+                expect(await this.fs.creatorClaimed(creator, index)).to.equal(true);
                 expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9995'));
                 expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10005'));
                 expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10000'));
@@ -281,7 +280,7 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('0');
             const enableWhiteList = true;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                name, token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             const index = 0;
@@ -301,7 +300,6 @@ describe('BounceFixedSwap', function () {
             expect(await this.fs.onlyBotHolderP(index)).to.equal(onlyBot);
             expect(await this.fs.maxEthPerWalletP(index)).to.be.bignumber.equal(maxEthPerWallet);
             expect(await this.fs.getPoolCount()).to.be.bignumber.equal(new BN('1'));
-            expect(await this.fs.teamPool(creator, index)).to.equal(true);
             expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9990'));
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10000'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10010'));
@@ -406,7 +404,7 @@ describe('BounceFixedSwap', function () {
             const maxEthPerWallet = ether('10');
             const enableWhiteList = false;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountTotal1, duration, openAt,
+                name, token0, token1, amountTotal0, amountTotal1, duration, openAt,
                 claimDelaySec, onlyBot, maxEthPerWallet, enableWhiteList
             ];
             await this.erc20Token.approve(this.fs.address, amountTotal0, { from: creator });
@@ -447,13 +445,13 @@ describe('BounceFixedSwap', function () {
                     'this pool is not closed'
                 );
                 await time.increase(36000);
-                expect(await this.fs.teamClaimed(creator, index)).to.equal(false);
+                expect(await this.fs.creatorClaimed(creator, index)).to.equal(false);
 
                 let before = await web3.eth.getBalance(creator);
                 await this.fs.creatorClaim(index, { from: creator, gasPrice: 100e9 });
                 let after = await web3.eth.getBalance(creator);
                 console.log(`ERC20/USDT claim gas fee: ${web3.utils.fromWei(new BN(before).sub(new BN(after)))}`);
-                expect(await this.fs.teamClaimed(creator, index)).to.equal(true);
+                expect(await this.fs.creatorClaimed(creator, index)).to.equal(true);
                 expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9995'));
                 expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10005'));
                 expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10000'));
