@@ -35,10 +35,10 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountTotal0;
         // total amount of token1
         uint amountTotal1;
-        // the duration in seconds the pool will be closed
-        uint duration;
         // the timestamp in seconds the pool will open
         uint openAt;
+        // the timestamp in seconds the pool will be closed
+        uint closeAt;
         // the delay timestamp in seconds when buyers can claim after pool filled
         uint claimDelaySec;
         bool onlyBot;
@@ -67,6 +67,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         uint claimDelaySec;
         // whether or not whitelist is enable
         bool enableWhiteList;
+        bool isOTC;
     }
 
     Pool[] public pools;
@@ -95,7 +96,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     // pool index => transaction fee
     mapping(uint => uint) public txFeeP;
     // pool index => whether or not the pool is de-listed
-    mapping(uint => bool) public deListedP;
+//    mapping(uint => bool) public deListedP;
 
     event Created(uint indexed index, address indexed sender, Pool pool);
     event Swapped(uint indexed index, address indexed sender, uint amount0, uint amount1, uint txFee);
@@ -129,7 +130,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
-        require(poolReq.duration != 0, "invalid duration");
+        require(poolReq.closeAt > poolReq.openAt || poolReq.closeAt == 0, "invalid closeAt");
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         if (poolReq.maxEthPerWallet != 0) {
@@ -160,35 +161,47 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountTotal0 = poolReq.amountTotal0;
         pool.amountTotal1 = poolReq.amountTotal1;
         pool.openAt = poolReq.openAt;
-        pool.closeAt = poolReq.openAt.add(poolReq.duration);
-        pool.claimDelaySec = poolReq.claimDelaySec;
+        pool.closeAt = poolReq.closeAt;
         pool.enableWhiteList = poolReq.enableWhiteList;
+        if (poolReq.closeAt == 0) {
+            pool.isOTC = true;
+            pool.claimDelaySec = 0;
+        } else {
+            pool.isOTC = false;
+            pool.claimDelaySec = poolReq.claimDelaySec;
+        }
         pools.push(pool);
 
         emit Created(index, msg.sender, pool);
     }
 
-    function deList(uint index) external
-        nonReentrant
-        isPoolExist(index)
-        isPoolNotClosed(index)
-    {
-        Pool memory pool = pools[index];
-        require(pool.creator == msg.sender, "invalid creator");
-        if (!deListedP[index]) {
-            deListedP[index] = true;
-            emit DeListed(index, msg.sender);
-        }
-    }
+//    function deList(uint index) external
+//        nonReentrant
+//        isPoolExist(index)
+//        isPoolNotClosed(index)
+//    {
+//        Pool memory pool = pools[index];
+//        require(pool.creator == msg.sender, "invalid creator");
+//        if (!deListedP[index]) {
+//            deListedP[index] = true;
+//            emit DeListed(index, msg.sender);
+//        }
+//    }
 
     function swap(uint index, uint amount1) external payable
         nonReentrant
         isPoolExist(index)
-        isPoolNotClosed(index)
+//        isPoolNotClosed(index)
         checkBotHolder(index)
     {
         address payable sender = msg.sender;
         Pool memory pool = pools[index];
+        if (pool.isOTC) {
+            require(!creatorClaimed[pool.creator][index], "pool de-listed");
+        } else {
+            require(pools[index].closeAt > now, "this pool is closed");
+        }
+
         if (pool.enableWhiteList) {
             require(whitelistP[index][sender], "sender not in whitelist");
         }
@@ -278,7 +291,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         require(!creatorClaimed[pool.creator][index], "claimed");
         creatorClaimed[pool.creator][index] = true;
 
-        if (pool.amountTotal1 != amountSwap1P[index] && !deListedP[index]) {
+        if (!pool.isOTC) {
             require(pool.closeAt <= now, "this pool is not closed");
         }
 
@@ -305,9 +318,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         address sender = msg.sender;
         require(pools[index].claimDelaySec > 0, "invalid claim");
         require(!myClaimed[sender][index], "claimed");
-        if (!deListedP[index]) {
-            require(pool.closeAt.add(pool.claimDelaySec) <= now, "claim not ready");
-        }
+        require(pool.closeAt.add(pool.claimDelaySec) <= now, "claim not ready");
         myClaimed[sender][index] = true;
         if (myAmountSwapped0[sender][index] > 0) {
             // send token0 to sender

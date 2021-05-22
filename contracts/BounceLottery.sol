@@ -28,9 +28,10 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         //uint nShare;
         //uint blockHeight;
         bool claim;
-        uint duration;
         // the timestamp in seconds the pool will open
         uint openAt;
+        // the timestamp in seconds the pool will be closed
+        uint closeAt;
         bool enableWhiteList;
         uint nShare;
     }
@@ -51,9 +52,10 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         //uint nShare;
         //uint blockHeight;
         bool claim;
-        uint duration;
         // the timestamp in seconds the pool will open
         uint openAt;
+        // the timestamp in seconds the pool will be closed
+        uint closeAt;
         bool enableWhiteList;
     }
 
@@ -109,8 +111,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.nShare <= poolReq.maxPlayer, "max player less than nShare");
         require(poolReq.maxPlayer < 65536, "max player must less 65536");
         require(poolReq.maxPlayer > 0, "the value of maxPlayer is zero");
-        require(poolReq.duration != 0, "the value of duration is zero");
-        require(poolReq.duration <= 30 days, "the value of duration is exceeded 30 days");
+        require(poolReq.openAt <= poolReq.closeAt && poolReq.closeAt.sub(poolReq.openAt) < 7 days, "invalid closed");
         require(bytes(poolReq.name).length <= 15, "the length of name is too long");
 
         uint index = pools.length;
@@ -137,8 +138,8 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         pool.token1 = poolReq.token1;
         pool.amountTotal1 = poolReq.amountTotal1;
         pool.maxPlayer = poolReq.maxPlayer;
-        pool.duration = poolReq.duration;
         pool.openAt = poolReq.openAt;
+        pool.closeAt = poolReq.closeAt;
         pool.enableWhiteList = poolReq.enableWhiteList;
         //pool.nShare = nShare;
 
@@ -163,8 +164,8 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         amountTotal1 = pool.amountTotal1;
         maxPlayer = pool.maxPlayer;
         nShare = poolsExt[index].nShare;
-        duration = pool.duration;
-        closeTime = pool.openAt.add(pool.duration);
+        duration = pool.closeAt.sub(pool.openAt);
+        closeTime = pool.closeAt;
     }
 
     function getPlayerStatus(uint index) public view returns (uint) {
@@ -262,7 +263,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         Pool memory pool = pools[index];
 
         require(!allPlayerClaim[index][sender], "You have claimed this pool");
-        require(pool.openAt.add(pool.duration) < now, "It's not time to start the prize");
+        require(pool.closeAt < now, "It's not time to start the prize");
         allPlayerClaim[index][sender] = true;
 
         if (isWinner(index, address(sender))) {
@@ -313,7 +314,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     function isWinner(uint index, address sender) public view returns (bool) {
-        require(pools[index].openAt.add(pools[index].duration) < now, "It's not time to start the prize");
+        require(pools[index].closeAt < now, "It's not time to start the prize");
         if (allPlayer[index][sender] == 0) {
             return false;
         }
@@ -360,7 +361,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     modifier isPoolClosed(uint index) {
-        if (pools[index].openAt.add(pools[index].duration) <= now) {
+        if (pools[index].closeAt <= now) {
             _;
         } else {
             revert("this pool is not closed");
@@ -368,7 +369,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     modifier isPoolNotClosed(uint index) {
-        require(pools[index].openAt.add(pools[index].duration) > now, "this pool is closed");
+        require(pools[index].closeAt > now, "this pool is closed");
         _;
     }
 

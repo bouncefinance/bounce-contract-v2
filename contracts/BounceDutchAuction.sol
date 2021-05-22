@@ -36,10 +36,10 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountMin1;
         // how many times a bid will decrease it's price
         uint times;
-        // the duration in seconds the pool will be closed
-        uint duration;
         // the timestamp in seconds the pool will open
         uint openAt;
+        // the timestamp in seconds the pool will be closed
+        uint closeAt;
         bool onlyBot;
     }
 
@@ -123,8 +123,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.amountMin1 != 0, "the value of amountMax1 is zero");
         require(poolReq.amountMax1 != 0, "the value of amountMin1 is zero");
         require(poolReq.amountMax1 > poolReq.amountMin1, "amountMax1 should larger than amountMin1");
-        require(poolReq.duration != 0, "the value of duration is zero");
-        require(poolReq.duration <= 7 days, "the value of duration is exceeded one week");
+        require(poolReq.openAt <= poolReq.closeAt && poolReq.closeAt.sub(poolReq.openAt) < 7 days, "invalid closed");
         require(poolReq.times != 0, "the value of times is zero");
         require(bytes(poolReq.name).length <= 15, "the length of name is too long");
 
@@ -158,9 +157,9 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountMax1 = poolReq.amountMax1;
         pool.amountMin1 = poolReq.amountMin1;
         pool.times = poolReq.times;
-        pool.duration = poolReq.duration;
+        pool.duration = poolReq.closeAt.sub(poolReq.openAt);
         pool.openAt = poolReq.openAt;
-        pool.closeAt = poolReq.openAt.add(poolReq.duration);
+        pool.closeAt = poolReq.closeAt;
         pools.push(pool);
 
         if (poolReq.onlyBot) {

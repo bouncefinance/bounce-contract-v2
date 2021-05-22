@@ -33,10 +33,10 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountTotal0;
         // total amount of token1
         uint amountMin1;
-        // the duration in seconds the pool will be closed
-        uint duration;
         // the timestamp in seconds the pool will open
         uint openAt;
+        // the timestamp in seconds the pool will be closed
+        uint closeAt;
         bool onlyBot;
         uint minEthBidP;
     }
@@ -131,8 +131,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     {
         require(poolReq.amountTotal0 != 0, "the value of amountTotal0 is zero");
         require(poolReq.amountMin1 != 0, "the value of amountMin1 is zero");
-        require(poolReq.duration != 0, "the value of duration is zero");
-        require(poolReq.duration <= 7 days, "the value of duration is exceeded 30 days");
+        require(poolReq.openAt <= poolReq.closeAt && poolReq.closeAt.sub(poolReq.openAt) < 7 days, "invalid closed");
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         uint index = pools.length;
@@ -164,7 +163,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountTotal0 = poolReq.amountTotal0;
         pool.amountMin1 = poolReq.amountMin1;
         pool.openAt = poolReq.openAt;
-        pool.closeAt = poolReq.openAt.add(poolReq.duration);
+        pool.closeAt = poolReq.closeAt;
         pools.push(pool);
 
         if (poolReq.minEthBidP != 0) {
