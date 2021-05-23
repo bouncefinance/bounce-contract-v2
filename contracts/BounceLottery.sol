@@ -71,12 +71,12 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     mapping(uint => mapping(address => uint)) public allPlayer;
     // pool ID =>  all player =>if claim
     mapping(uint => mapping(address => bool)) public allPlayerClaim;
-    //pool ID =>PoolExt 
+    //pool ID =>PoolExt
     mapping(uint => PoolExt) public poolsExt;
 
     //address create poolsID
     mapping(address => uint[]) public myCreate;
-    //address bet poolsID 
+    //address bet poolsID
     mapping(address => uint[]) public myPlay;
 
     // name => pool index
@@ -101,7 +101,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
                 config[BounceContract] = uint(0x73282A63F0e3D7e9604575420F777361ecA3C86A);*/
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) public payable
+    function create(CreateReq memory poolReq, address[] memory whitelist_) external
         nonReentrant
         nameNotBeenToken(poolReq.name)
     {

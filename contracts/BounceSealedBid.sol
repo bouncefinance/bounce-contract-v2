@@ -125,7 +125,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) public payable
+    function create(CreateReq memory poolReq, address[] memory whitelist_) external
         nonReentrant
         isPoolNotCreate(poolReq.creator)
     {

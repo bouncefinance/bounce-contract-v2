@@ -115,7 +115,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) public payable
+    function create(CreateReq memory poolReq, address[] memory whitelist_) external
         nonReentrant
         isPoolNotCreate(poolReq.creator)
     {

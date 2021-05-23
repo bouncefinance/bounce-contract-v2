@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard
 import "./Governable.sol";
 import "./interfaces/IBounceStake.sol";
 
-contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
+contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
@@ -34,10 +34,6 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountTotal1;
         // the timestamp in seconds the pool will open
         uint openAt;
-        // the timestamp in seconds the pool will be closed
-        uint closeAt;
-        // the delay timestamp in seconds when buyers can claim after pool filled
-        uint claimAt;
         uint maxAmount1PerWallet;
         bool onlyBot;
         bool enableWhiteList;
@@ -58,10 +54,6 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountTotal1;
         // the timestamp in seconds the pool will open
         uint openAt;
-        // the timestamp in seconds the pool will be closed
-        uint closeAt;
-        // the delay timestamp in seconds when buyers can claim after pool filled
-        uint claimAt;
         // whether or not whitelist is enable
         bool enableWhiteList;
     }
@@ -76,7 +68,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     mapping(uint => uint) public amountSwap1P;
     // pool index => the swap pool only allow BOT holder to take part in
     mapping(uint => bool) public onlyBotHolderP;
-    // pool index => maximum swap amount1 per wallet, if the value is not set, the default value is zero
+    // pool index => maximum swap amount of ETH per wallet, if the value is not set, the default value is zero
     mapping(uint => uint) public maxAmount1PerWalletP;
     // team address => pool index => whether or not creator's pool has been claimed
     mapping(address => mapping(uint => bool)) public creatorClaimed;
@@ -91,11 +83,14 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     mapping(uint => mapping(address => bool)) public whitelistP;
     // pool index => transaction fee
     mapping(uint => uint) public txFeeP;
+    // pool index => whether or not the pool is de-listed
+//    mapping(uint => bool) public deListedP;
 
     event Created(uint indexed index, address indexed sender, Pool pool);
     event Swapped(uint indexed index, address indexed sender, uint amount0, uint amount1, uint txFee);
     event Claimed(uint indexed index, address indexed sender, uint amount0, uint txFee);
     event UserClaimed(uint indexed index, address indexed sender, uint amount0);
+    event DeListed(uint indexed index, address indexed sender);
 
     function initialize() public initializer {
         super.__Ownable_init();
@@ -123,7 +118,6 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
-        require(poolReq.closeAt > poolReq.openAt || poolReq.closeAt == 0, "invalid closeAt");
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         if (poolReq.maxAmount1PerWallet != 0) {
@@ -154,22 +148,32 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountTotal0 = poolReq.amountTotal0;
         pool.amountTotal1 = poolReq.amountTotal1;
         pool.openAt = poolReq.openAt;
-        pool.closeAt = poolReq.closeAt;
-        pool.claimAt = poolReq.claimAt;
         pool.enableWhiteList = poolReq.enableWhiteList;
         pools.push(pool);
 
         emit Created(index, msg.sender, pool);
     }
 
+//    function deList(uint index) external
+//        nonReentrant
+//        isPoolExist(index)
+//    {
+//        Pool memory pool = pools[index];
+//        require(pool.creator == msg.sender, "invalid creator");
+//        if (!deListedP[index]) {
+//            deListedP[index] = true;
+//            emit DeListed(index, msg.sender);
+//        }
+//    }
+
     function swap(uint index, uint amount1) external payable
         nonReentrant
         isPoolExist(index)
-        isPoolNotClosed(index)
         checkBotHolder(index)
     {
         address payable sender = msg.sender;
         Pool memory pool = pools[index];
+        require(!creatorClaimed[pool.creator][index], "pool de-listed");
 
         if (pool.enableWhiteList) {
             require(whitelistP[index][sender], "sender not in whitelist");
@@ -218,14 +222,12 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
             IERC20(pool.token1).safeTransferFrom(sender, address(this), amount1);
         }
 
-        if (pool.claimAt == 0) {
-            if (_amount0 > 0) {
-                // send token0 to sender
-                if (pool.token0 == address(0)) {
-                    sender.transfer(_amount0);
-                } else {
-                    IERC20(pool.token0).safeTransfer(sender, _amount0);
-                }
+        if (_amount0 > 0) {
+            // send token0 to sender
+            if (pool.token0 == address(0)) {
+                sender.transfer(_amount0);
+            } else {
+                IERC20(pool.token0).safeTransfer(sender, _amount0);
             }
         }
         if (excessAmount1 > 0) {
@@ -252,10 +254,9 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         emit Swapped(index, sender, _amount0, _actualAmount1, txFee);
     }
 
-    function creatorClaim(uint index) external
+    function deList(uint index) external
         nonReentrant
         isPoolExist(index)
-        isPoolClosed(index)
     {
         Pool memory pool = pools[index];
         require(!creatorClaimed[pool.creator][index], "claimed");
@@ -274,27 +275,6 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         }
 
         emit Claimed(index, msg.sender, unSwapAmount0, txFeeP[index]);
-    }
-
-    function userClaim(uint index) external
-        nonReentrant
-        isPoolExist(index)
-    {
-        Pool memory pool = pools[index];
-        address sender = msg.sender;
-        require(pools[index].claimAt > 0, "invalid claim");
-        require(!myClaimed[sender][index], "claimed");
-        require(pool.claimAt <= now, "claim not ready");
-        myClaimed[sender][index] = true;
-        if (myAmountSwapped0[sender][index] > 0) {
-            // send token0 to sender
-            if (pool.token0 == address(0)) {
-                msg.sender.transfer(myAmountSwapped0[sender][index]);
-            } else {
-                IERC20(pool.token0).safeTransfer(msg.sender, myAmountSwapped0[sender][index]);
-            }
-        }
-        emit UserClaimed(index, sender, myAmountSwapped0[sender][index]);
     }
 
     function _addWhitelist(uint index, address[] memory whitelist_) private {
@@ -331,16 +311,6 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
     function getStakeContract() public view returns (address) {
         return address(config[StakeContract]);
-    }
-
-    modifier isPoolClosed(uint index) {
-        require(pools[index].closeAt <= now, "this pool is not closed");
-        _;
-    }
-
-    modifier isPoolNotClosed(uint index) {
-        require(pools[index].closeAt > now, "this pool is closed");
-        _;
     }
 
     modifier isPoolExist(uint index) {
