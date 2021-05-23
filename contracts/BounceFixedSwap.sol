@@ -300,11 +300,13 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         }
     }
 
-    function addWhitelist(uint index, address[] memory whitelist_) public onlyOwner {
+    function addWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         _addWhitelist(index, whitelist_);
     }
 
     function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         for (uint i = 0; i < whitelist_.length; i++) {
             delete whitelistP[index][whitelist_[i]];
         }

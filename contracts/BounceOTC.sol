@@ -83,14 +83,11 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     mapping(uint => mapping(address => bool)) public whitelistP;
     // pool index => transaction fee
     mapping(uint => uint) public txFeeP;
-    // pool index => whether or not the pool is de-listed
-//    mapping(uint => bool) public deListedP;
 
     event Created(uint indexed index, address indexed sender, Pool pool);
     event Swapped(uint indexed index, address indexed sender, uint amount0, uint amount1, uint txFee);
     event Claimed(uint indexed index, address indexed sender, uint amount0, uint txFee);
     event UserClaimed(uint indexed index, address indexed sender, uint amount0);
-    event DeListed(uint indexed index, address indexed sender);
 
     function initialize() public initializer {
         super.__Ownable_init();
@@ -150,18 +147,6 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
         emit Created(index, msg.sender, pool);
     }
-
-//    function deList(uint index) external
-//        nonReentrant
-//        isPoolExist(index)
-//    {
-//        Pool memory pool = pools[index];
-//        require(pool.creator == msg.sender, "invalid creator");
-//        if (!deListedP[index]) {
-//            deListedP[index] = true;
-//            emit DeListed(index, msg.sender);
-//        }
-//    }
 
     function swap(uint index, uint amount1) external payable
         nonReentrant
@@ -280,11 +265,13 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         }
     }
 
-    function addWhitelist(uint index, address[] memory whitelist_) public onlyOwner {
+    function addWhitelist(uint index, address[] memory whitelist_) external {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         _addWhitelist(index, whitelist_);
     }
 
-    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+    function removeWhitelist(uint index, address[] memory whitelist_) external {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         for (uint i = 0; i < whitelist_.length; i++) {
             delete whitelistP[index][whitelist_[i]];
         }
