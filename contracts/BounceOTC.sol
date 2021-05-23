@@ -241,6 +241,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         isPoolExist(index)
     {
         Pool memory pool = pools[index];
+        require(pool.creator == msg.sender, "not creator");
         require(!creatorClaimed[pool.creator][index], "claimed");
         creatorClaimed[pool.creator][index] = true;
 
