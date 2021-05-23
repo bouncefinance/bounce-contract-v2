@@ -114,7 +114,6 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
         uint index = pools.length;
-        require(poolReq.token0 != poolReq.token1, "token0 and token1 is same");
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");

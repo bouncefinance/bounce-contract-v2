@@ -119,11 +119,11 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
         uint index = pools.length;
-        require(poolReq.token0 != poolReq.token1, "token0 and token1 is same");
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
-        require(poolReq.closeAt > poolReq.openAt || poolReq.closeAt == 0, "invalid closeAt");
+        require(poolReq.closeAt > poolReq.openAt, "invalid closeAt");
+        require(poolReq.claimAt == 0 || poolReq.claimAt >= poolReq.closeAt, "invalid closeAt");
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         if (poolReq.maxAmount1PerWallet != 0) {
@@ -279,12 +279,11 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
     function userClaim(uint index) external
         nonReentrant
         isPoolExist(index)
+        isClaimReady(index)
     {
         Pool memory pool = pools[index];
         address sender = msg.sender;
-        require(pools[index].claimAt > 0, "invalid claim");
         require(!myClaimed[sender][index], "claimed");
-        require(pool.claimAt <= now, "claim not ready");
         myClaimed[sender][index] = true;
         if (myAmountSwapped0[sender][index] > 0) {
             // send token0 to sender
@@ -340,6 +339,12 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
 
     modifier isPoolNotClosed(uint index) {
         require(pools[index].closeAt > now, "this pool is closed");
+        _;
+    }
+
+    modifier isClaimReady(uint index) {
+        require(pools[index].claimAt != 0, "invalid claim");
+        require(pools[index].claimAt <= now, "claim not ready");
         _;
     }
 
