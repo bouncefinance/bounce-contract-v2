@@ -1,11 +1,11 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-    const BounceFixedSwap = await ethers.getContractFactory("BounceFixedSwap");
-    const contract = await upgrades.deployProxy(BounceFixedSwap, [], 'initialize');
+    const OTC = await ethers.getContractFactory("BounceOTC");
+    const contract = await upgrades.deployProxy(OTC, [], 'initialize');
     await contract.deployed();
 
-    console.log("BounceFixedSwap deployed to:", contract.address);
+    console.log("OTC deployed to:", contract.address);
 }
 
 main()

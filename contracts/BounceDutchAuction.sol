@@ -102,8 +102,8 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         super.__Ownable_init();
         super.__ReentrancyGuard_init();
 
-        config[TxFeeRatio] = 0.02 ether;
-        config[MinValueOfBotHolder] = 0.5 ether;
+        config[TxFeeRatio] = 0.015 ether;
+        config[MinValueOfBotHolder] = 60 ether;
         config[BotToken] = uint(0xA9B1Eb5908CfC3cdf91F9B8B3a74108598009096);
         config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
     }
@@ -112,7 +112,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         initialize();
 
         config[BotToken] = uint(0x5E26FA0FE067d28aae8aFf2fB85Ac2E693BD9EfA);
-        config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
+        config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external

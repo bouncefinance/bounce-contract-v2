@@ -104,8 +104,8 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         super.__Ownable_init();
         super.__ReentrancyGuard_init();
 
-        config[TxFeeRatio] = 0.02 ether;
-        config[MinValueOfBotHolder] = 0.5 ether;
+        config[TxFeeRatio] = 0.015 ether;
+        config[MinValueOfBotHolder] = 60 ether;
         config[MaxBidCount] = 1000;
 
         // mainnet
@@ -116,11 +116,6 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     function initialize_rinkeby() public {
         initialize();
 
-        config[TxFeeRatio] = 0.02 ether;
-        config[MinValueOfBotHolder] = 0.5 ether;
-        config[MaxBidCount] = 1000;
-
-        // rinkeby
         config[BotToken] = uint(0x5E26FA0FE067d28aae8aFf2fB85Ac2E693BD9EfA);
         config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
     }
