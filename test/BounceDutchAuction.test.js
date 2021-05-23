@@ -31,12 +31,12 @@ describe('BounceDutchAuction', function () {
         // initialize Bounce contract
         await this.da.initialize({ from: governor });
         await expectRevert(this.da.initialize({ from: owner }), 'Contract instance has already been initialized.');
-        await this.da.setConfig(web3.utils.fromAscii("DAV2P::TxFeeRatio"), ether('0.02'), { from: governor });
-        await this.da.setConfig(web3.utils.fromAscii("DAV2P::MinValueOfBotHolder"), ether('0.1'), { from: governor });
-        await this.da.setConfig(web3.utils.fromAscii("DAV2P::BotToken"), this.erc20Token.address, { from: governor });
-        await this.da.setConfig(web3.utils.fromAscii("DAV2P::StakeContract"), this.bounceStake.address, { from: governor });
+        await this.da.setConfig(web3.utils.fromAscii("TxFeeRatio"), ether('0.02'), { from: governor });
+        await this.da.setConfig(web3.utils.fromAscii("MinValueOfBotHolder"), ether('0.1'), { from: governor });
+        await this.da.setConfig(web3.utils.fromAscii("BotToken"), this.erc20Token.address, { from: governor });
+        await this.da.setConfig(web3.utils.fromAscii("StakeContract"), this.bounceStake.address, { from: governor });
         await expectRevert.unspecified(
-            this.da.setConfig(web3.utils.fromAscii("DAV2P::TxFeeRatio"), ether('0.02'), { from: owner })
+            this.da.setConfig(web3.utils.fromAscii("TxFeeRatio"), ether('0.02'), { from: owner })
         );
         expect(await this.da.getTxFeeRatio()).to.be.bignumber.equal(ether('0.02'));
         expect(await this.da.getMinValueOfBotHolder()).to.be.bignumber.equal(ether('0.1'));

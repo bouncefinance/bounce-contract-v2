@@ -14,11 +14,11 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    bytes32 internal constant TxFeeRatio =              bytes32("SBP::TxFeeRatio");
-    bytes32 internal constant MaxBidCount =             bytes32("SBP::MaxBidCount");
-    bytes32 internal constant MinValueOfBotHolder =     bytes32("SBP::MinValueOfBotHolder");
-    bytes32 internal constant BotToken =                bytes32("SBP::BotToken");
-    bytes32 internal constant StakeContract  =          bytes32("SBP::StakeContract");
+    bytes32 internal constant TxFeeRatio =              bytes32("TxFeeRatio");
+    bytes32 internal constant MaxBidCount =             bytes32("MaxBidCount");
+    bytes32 internal constant MinValueOfBotHolder =     bytes32("MinValueOfBotHolder");
+    bytes32 internal constant BotToken =                bytes32("BotToken");
+    bytes32 internal constant StakeContract  =          bytes32("StakeContract");
 
     struct CreateReq {
         // pool name

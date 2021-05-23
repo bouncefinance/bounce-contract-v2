@@ -31,11 +31,11 @@ describe('BounceSealedBid', function () {
         // initialize Bounce contract
         await this.sb.initialize({ from: governor });
         await expectRevert(this.sb.initialize({ from: owner }), 'Contract instance has already been initialized');
-        await this.sb.setConfig(web3.utils.fromAscii("SBP::TxFeeRatio"), ether('0.02'), { from: governor });
-        await this.sb.setConfig(web3.utils.fromAscii("SBP::MaxBidCount"), 1000, { from: governor });
-        await this.sb.setConfig(web3.utils.fromAscii("SBP::MinValueOfBotHolder"), ether('0.5'), { from: governor });
-        await this.sb.setConfig(web3.utils.fromAscii("SBP::BotToken"), this.erc20Token.address, { from: governor });
-        await this.sb.setConfig(web3.utils.fromAscii("SBP::StakeContract"), this.bounceStake.address, { from: governor });
+        await this.sb.setConfig(web3.utils.fromAscii("TxFeeRatio"), ether('0.02'), { from: governor });
+        await this.sb.setConfig(web3.utils.fromAscii("MaxBidCount"), 1000, { from: governor });
+        await this.sb.setConfig(web3.utils.fromAscii("MinValueOfBotHolder"), ether('0.5'), { from: governor });
+        await this.sb.setConfig(web3.utils.fromAscii("BotToken"), this.erc20Token.address, { from: governor });
+        await this.sb.setConfig(web3.utils.fromAscii("StakeContract"), this.bounceStake.address, { from: governor });
         expect(await this.sb.getTxFeeRatio()).to.be.bignumber.equal(ether('0.02'));
         expect(await this.sb.getMinValueOfBotHolder()).to.be.bignumber.equal(ether('0.5'));
         expect(await this.sb.getMaxBidCount()).to.be.bignumber.equal(new BN('1000'));

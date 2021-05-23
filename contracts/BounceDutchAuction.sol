@@ -14,10 +14,10 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    bytes32 internal constant TxFeeRatio =              bytes32("DAV2P::TxFeeRatio");
-    bytes32 internal constant MinValueOfBotHolder =     bytes32("DAV2P::MinValueOfBotHolder");
-    bytes32 internal constant BotToken =                bytes32("DAV2P::BotToken");
-    bytes32 internal constant StakeContract =           bytes32("DAV2P::StakeContract");
+    bytes32 internal constant TxFeeRatio =              bytes32("TxFeeRatio");
+    bytes32 internal constant MinValueOfBotHolder =     bytes32("MinValueOfBotHolder");
+    bytes32 internal constant BotToken =                bytes32("BotToken");
+    bytes32 internal constant StakeContract =           bytes32("StakeContract");
 
     struct CreateReq {
         // pool name
