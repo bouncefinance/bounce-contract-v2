@@ -195,7 +195,6 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         isPoolNotClosed(index)
     {
         address payable sender = msg.sender;
-        uint ethAmount1 = msg.value;
         Pool memory pool = pools[index];
         require(allPlayer[index][sender] == 0, "You have already bet");
 
@@ -203,11 +202,9 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
             require(whitelistP[index][sender], "sender not in whitelist");
         }
 
-        //require(pool.creator != sender, "creator can't bid the pool created by self");
-
         require(pool.curPlayer < pool.maxPlayer, "Player has reached the upper limit");
         if (pool.token1 == address(0)) {
-            require(ethAmount1 >= pool.amountTotal1, "The bet amount is too low");
+            require(msg.value == pool.amountTotal1, "The bet amount is too low");
         } else {
             IERC20(pool.token1).safeTransferFrom(sender, address(this), pool.amountTotal1);
         }
