@@ -190,6 +190,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
             require(whitelistP[index][sender], "sender not in whitelist");
         }
         Pool memory pool = pools[index];
+        require(pool.openAt <= now, "pool not open");
         require(amount0 != 0, "the value of amount0 is zero");
         require(amount1 != 0, "the value of amount1 is zero");
         require(pool.amountTotal0 > amountSwap0P[index], "swap amount is zero");

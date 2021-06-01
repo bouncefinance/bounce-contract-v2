@@ -67,15 +67,16 @@ describe('BounceDutchAuction', function () {
             const amountMax1 = ether('20');
             const amountMin1 = ether('10');
             const times = 4;
-            const duration = 50;
             const openAt = (await time.latest()).add(time.duration.hours(1));
+            const closeAt = openAt.add(time.duration.hours(10));
             const onlyBot = true;
+            const enableWhiteList = true;
             const index = 0;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, duration, openAt, onlyBot,
+                name, creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, openAt, closeAt, onlyBot, enableWhiteList,
             ];
             await this.erc20Token.approve(this.da.address, amountTotal0, { from: creator });
-            await this.da.create(createReq, [], { from: creator });
+            await this.da.create(createReq, [bidder1, bidder2], { from: creator });
             const pool = await this.da.pools(index);
             expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
@@ -85,9 +86,10 @@ describe('BounceDutchAuction', function () {
             expect(pool.amountMax1).to.be.bignumber.equal(amountMax1);
             expect(pool.amountMin1).to.be.bignumber.equal(amountMin1);
             expect(pool.times).to.be.bignumber.equal(new BN(times));
-            expect(pool.duration).to.be.bignumber.equal(new BN(duration));
             expect(pool.openAt).to.be.bignumber.equal(openAt);
-            expect(pool.closeAt).to.be.bignumber.gt(new BN(duration));
+            expect(pool.openAt).to.be.bignumber.equal(openAt);
+            expect(pool.closeAt).to.be.bignumber.equal(closeAt);
+            expect(pool.enableWhiteList).to.equal(enableWhiteList);
             expect(await this.da.onlyBotHolderP(index)).to.equal(true);
             expect(await this.da.myCreatedP(creator)).to.be.bignumber.equal(new BN('1'));
             expect(await this.da.creatorClaimedP(index)).to.equal(false);
@@ -114,7 +116,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = ether('0.9');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder1, value: amount1 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('1'));
             expect(await this.da.myAmountSwap1P(bidder2, index)).to.be.bignumber.equal(ether('0.9'));
@@ -124,7 +126,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = ether('0.8');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('2'));
             expect(await this.da.myAmountSwap1P(bidder2, index)).to.be.bignumber.equal(ether('1.7'));
@@ -134,7 +136,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = ether('0.7');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('3'));
             expect(await this.da.myAmountSwap1P(bidder2, index)).to.be.bignumber.equal(ether('2.4'));
@@ -144,7 +146,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = ether('0.6');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('4'));
             expect(await this.da.myAmountSwap1P(bidder2, index)).to.be.bignumber.equal(ether('3'));
@@ -164,7 +166,7 @@ describe('BounceDutchAuction', function () {
             await expectRevert(this.da.creatorClaim(index, { from: creator }), "this pool is not closed");
             await expectRevert(this.da.creatorClaim(100, { from: bidder1 }), "this pool does not exist");
             await expectRevert(this.da.creatorClaim(1, { from: bidder1 }), "this pool does not exist");
-            await time.increase(time.duration.seconds(5));
+            await time.increase(time.duration.hours(2.5));
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2, value: amount1 }), "this pool is closed");
             await expectRevert(this.da.creatorClaim(index, { from: bidder1 }), "sender is not pool creator");
             await this.da.creatorClaim(index, { from: creator });
@@ -211,15 +213,16 @@ describe('BounceDutchAuction', function () {
             const amountMax1 = usd('20');
             const amountMin1 = usd('10');
             const times = 4;
-            const duration = 50;
             const openAt = (await time.latest()).add(time.duration.hours(1));
+            const closeAt = openAt.add(time.duration.hours(10));
             const onlyBot = true;
+            const enableWhiteList = true;
             const index = 0;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, duration, openAt, onlyBot,
+                name, creator, token0, token1, amountTotal0, amountMax1, amountMin1, times, openAt, closeAt, onlyBot, enableWhiteList,
             ];
             await this.erc20Token.approve(this.da.address, amountTotal0, { from: creator });
-            await this.da.create(createReq, [], { from: creator });
+            await this.da.create(createReq, [bidder1, bidder2, bidder3], { from: creator });
             const pool = await this.da.pools(index);
             expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
@@ -229,9 +232,9 @@ describe('BounceDutchAuction', function () {
             expect(pool.amountMax1).to.be.bignumber.equal(amountMax1);
             expect(pool.amountMin1).to.be.bignumber.equal(amountMin1);
             expect(pool.times).to.be.bignumber.equal(new BN(times));
-            expect(pool.duration).to.be.bignumber.equal(new BN(duration));
             expect(pool.openAt).to.be.bignumber.equal(openAt);
-            expect(pool.closeAt).to.be.bignumber.gt(new BN(duration));
+            expect(pool.closeAt).to.be.bignumber.equal(closeAt);
+            expect(pool.enableWhiteList).to.equal(enableWhiteList);
             expect(await this.da.onlyBotHolderP(index)).to.equal(true);
             expect(await this.da.myCreatedP(creator)).to.be.bignumber.equal(new BN('1'));
             expect(await this.da.creatorClaimedP(index)).to.equal(false);
@@ -267,7 +270,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = usd('0.9');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder1 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.usdToken.approve(this.da.address, amount1, { from: bidder2 });
             await this.da.bid(index, amount0, amount1, { from: bidder2 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('1'));
@@ -286,7 +289,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = usd('0.8');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.usdToken.approve(this.da.address, amount1, { from: bidder2 });
             await this.da.bid(index, amount0, amount1, { from: bidder2 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('2'));
@@ -305,7 +308,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = usd('0.7');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.usdToken.approve(this.da.address, amount1, { from: bidder2 });
             await this.da.bid(index, amount0, amount1, { from: bidder2 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('3'));
@@ -324,7 +327,7 @@ describe('BounceDutchAuction', function () {
 
             amount0 = ether('1'); amount1 = usd('0.6');
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2 }), "the bid price is lower than the current price");
-            await time.increase(time.duration.seconds(10));
+            await time.increase(time.duration.hours(2.5));
             await this.usdToken.approve(this.da.address, amount1, { from: bidder2 });
             await this.da.bid(index, amount0, amount1, { from: bidder2 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('4'));
@@ -342,7 +345,7 @@ describe('BounceDutchAuction', function () {
             expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10000'));
 
             amount0 = ether('1'); amount1 = usd('0.5');
-            await time.increase(time.duration.seconds(5));
+            await time.increase(time.duration.hours(1));
             await this.usdToken.approve(this.da.address, amount1, { from: bidder2 });
             await this.da.bid(index, amount0, amount1, { from: bidder2 });
             expect(await this.da.myAmountSwap0P(bidder2, index)).to.be.bignumber.equal(ether('5'));
@@ -362,7 +365,7 @@ describe('BounceDutchAuction', function () {
             await expectRevert(this.da.creatorClaim(index, { from: creator }), "this pool is not closed");
             await expectRevert(this.da.creatorClaim(100, { from: bidder1 }), "this pool does not exist");
             await expectRevert(this.da.creatorClaim(1, { from: bidder1 }), "this pool does not exist");
-            await time.increase(time.duration.seconds(5));
+            await time.increase(time.duration.hours(2.5));
             await expectRevert(this.da.bid(index, amount0, amount1, { from: bidder2 }), "this pool is closed");
             await expectRevert(this.da.creatorClaim(index, { from: bidder1 }), "sender is not pool creator");
             await this.da.creatorClaim(index, { from: creator });

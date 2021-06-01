@@ -64,16 +64,17 @@ describe('BounceSealedBid', function () {
             const token1 = ZERO_ADDRESS;
             const amountTotal0 = ether('20');
             const amountMin1 = ether('10');
-            const duration = 86400;
             const openAt = (await time.latest()).add(time.duration.hours(1));
+            const closeAt = openAt.add(time.duration.hours(10));
             const onlyBot = true;
-            const minEthPerWallet = ether('0.1');
+            const enableWhiteList = true;
+            const maxAmount1PerWallet = ether('0.1');
             const index = 0;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountMin1, duration, openAt, onlyBot, minEthPerWallet
+                name, creator, token0, token1, amountTotal0, amountMin1, openAt, closeAt, onlyBot, maxAmount1PerWallet, enableWhiteList
             ];
             await this.erc20Token.approve(this.sb.address, amountTotal0, { from: creator });
-            await this.sb.create(createReq, [], { from: creator });
+            await this.sb.create(createReq, [bidder1, bidder2, bidder3], { from: creator });
             const pool = await this.sb.pools(index);
             expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
@@ -82,7 +83,8 @@ describe('BounceSealedBid', function () {
             expect(pool.amountTotal0).to.be.bignumber.equal(amountTotal0);
             expect(pool.amountMin1).to.be.bignumber.equal(amountMin1);
             expect(pool.openAt).to.be.bignumber.equal(openAt);
-            expect(pool.closeAt).to.be.bignumber.gt(new BN(duration));
+            expect(pool.closeAt).to.be.bignumber.equal(closeAt);
+            expect(pool.enableWhiteList).to.equal(enableWhiteList);
             expect(await this.sb.getBidderListCount(index)).to.be.bignumber.equal(new BN('0'));
             expect(await this.sb.myCreatedP(creator)).to.be.bignumber.equal(new BN('1'));
             expect(await this.sb.creatorClaimedP(index)).to.equal(false);
@@ -329,16 +331,17 @@ describe('BounceSealedBid', function () {
             const token1 = this.usdToken.address;
             const amountTotal0 = ether('20');
             const amountMin1 = usd('10');
-            const duration = 86400;
             const openAt = (await time.latest()).add(time.duration.hours(1));
+            const closeAt = openAt.add(time.duration.hours(10));
             const onlyBot = true;
-            const minEthPerWallet = usd('0.1');
+            const enableWhiteList = true;
+            const maxAmount1PerWallet = usd('0.1');
             const index = 0;
             const createReq = [
-                name, creator, token0, token1, amountTotal0, amountMin1, duration, openAt, onlyBot, minEthPerWallet
+                name, creator, token0, token1, amountTotal0, amountMin1, openAt, closeAt, onlyBot, maxAmount1PerWallet, enableWhiteList
             ];
             await this.erc20Token.approve(this.sb.address, amountTotal0, { from: creator });
-            await this.sb.create(createReq, [], { from: creator });
+            await this.sb.create(createReq, [bidder1, bidder2, bidder3], { from: creator });
             const pool = await this.sb.pools(index);
             expect(pool.name).to.equal(name);
             expect(pool.creator).to.equal(creator);
@@ -347,7 +350,8 @@ describe('BounceSealedBid', function () {
             expect(pool.amountTotal0).to.be.bignumber.equal(amountTotal0);
             expect(pool.amountMin1).to.be.bignumber.equal(amountMin1);
             expect(pool.openAt).to.be.bignumber.equal(openAt);
-            expect(pool.closeAt).to.be.bignumber.gt(new BN(duration));
+            expect(pool.closeAt).to.be.bignumber.equal(closeAt);
+            expect(pool.enableWhiteList).to.equal(enableWhiteList);
             expect(await this.sb.myCreatedP(creator)).to.be.bignumber.equal(new BN('1'));
             expect(await this.sb.creatorClaimedP(index)).to.equal(false);
             expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9980'));
