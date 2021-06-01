@@ -128,6 +128,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         _token0.safeApprove(address(this), 0);
 
         if (poolReq.enableWhiteList) {
+            require(whitelist_.length > 0, "no whitelist imported");
             _addWhitelist(index, whitelist_);
         }
 
