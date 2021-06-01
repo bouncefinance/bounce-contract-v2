@@ -140,8 +140,6 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
             _token0.balanceOf(address(this)).sub(token0BalanceBefore) == poolReq.amountTotal0,
             "not support deflationary token"
         );
-        // reset allowance to 0
-        _token0.safeApprove(address(this), 0);
 
         if (poolReq.enableWhiteList) {
             require(whitelist_.length > 0, "no whitelist imported");
@@ -210,7 +208,6 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
             require(amount1 == msg.value, "invalid ETH amount");
         } else {
             IERC20(token1).safeTransferFrom(sender, address(this), amount1);
-            IERC20(token1).safeApprove(address(this), 0);
         }
 
         _swap(sender, index, amount0, amount1);
