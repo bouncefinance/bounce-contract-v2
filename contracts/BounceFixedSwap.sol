@@ -142,7 +142,9 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         // reset allowance to 0
         _token0.safeApprove(address(this), 0);
 
-        _addWhitelist(index, whitelist_);
+        if (poolReq.enableWhiteList) {
+            _addWhitelist(index, whitelist_);
+        }
 
         Pool memory pool;
         pool.name = poolReq.name;

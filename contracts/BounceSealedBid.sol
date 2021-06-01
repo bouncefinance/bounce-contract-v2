@@ -38,7 +38,9 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         // the timestamp in seconds the pool will be closed
         uint closeAt;
         bool onlyBot;
-        uint minEthBidP;
+        uint maxAmount1PerWallet;
+        // whether or not whitelist is enable
+        bool enableWhiteList;
     }
 
     struct Pool {
@@ -58,6 +60,8 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         uint openAt;
         // the timestamp in seconds the pool will be closed
         uint closeAt;
+        // whether or not whitelist is enable
+        bool enableWhiteList;
     }
 
     Pool[] public pools;
@@ -73,7 +77,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     // pool index => bid count
     mapping(uint => uint) public bidCountP;
     // pool index => minimum bid amount, if the value is not set, the default value is zero
-    mapping(uint => uint) public minEthBidP;
+    mapping(uint => uint) public maxAmount1PerWallet;
     // pool index => the swap pool only allow BOT holder to take part in
     mapping(uint => bool) public onlyBotHolderP;
 
@@ -90,8 +94,6 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     // account => pool index + 1. if the result is 0, the account don't create any pool.
     mapping(address => uint) public myCreatedP;
 
-
-    bool public enableWhiteList;
     // pool index => account => whether or not allow swap
     mapping(uint => mapping(address => bool)) public whitelistP;
 
@@ -120,10 +122,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) external
-        nonReentrant
-        isPoolNotCreate(poolReq.creator)
-    {
+    function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
         require(poolReq.amountTotal0 != 0, "the value of amountTotal0 is zero");
         require(poolReq.amountMin1 != 0, "the value of amountMin1 is zero");
         require(poolReq.openAt <= poolReq.closeAt && poolReq.closeAt.sub(poolReq.openAt) < 7 days, "invalid closed");
@@ -142,11 +141,8 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         // reset allowance to 0
         _token0.safeApprove(address(this), 0);
 
-        if (whitelist_.length > 0) {
-            enableWhiteList = true;
-            for (uint i = 0; i < whitelist_.length; i++) {
-                whitelistP[index][whitelist_[i]] = true;
-            }
+        if (poolReq.enableWhiteList) {
+            _addWhitelist(index, whitelist_);
         }
 
         // creator pool
@@ -159,10 +155,11 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountMin1 = poolReq.amountMin1;
         pool.openAt = poolReq.openAt;
         pool.closeAt = poolReq.closeAt;
+        pool.enableWhiteList = poolReq.enableWhiteList;
         pools.push(pool);
 
-        if (poolReq.minEthBidP != 0) {
-            minEthBidP[index] = poolReq.minEthBidP;
+        if (poolReq.maxAmount1PerWallet != 0) {
+            maxAmount1PerWallet[index] = poolReq.maxAmount1PerWallet;
         }
         if (poolReq.onlyBot) {
             onlyBotHolderP[index] = poolReq.onlyBot;
@@ -188,16 +185,16 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         isPoolNotClosed(index)
     {
         address payable sender = msg.sender;
-        if (enableWhiteList) {
+        Pool memory pool = pools[index];
+        if (pool.enableWhiteList) {
             require(whitelistP[index][sender], "sender not in whitelist");
         }
-        Pool memory pool = pools[index];
         require(pool.openAt <= now, "pool not open");
         require(amount0 != 0, "the value of amount0 is zero");
         require(amount1 != 0, "the value of amount1 is zero");
         require(myAmountBid1P[sender][index] == 0, "this pool has been bid by this sender");
         require(amount0.mul(getMaxBidCount()) >= pool.amountTotal0, "the bid amount is too low");
-        require(amount1 >= minEthBidP[index], "the bid amount is lower than minimum ETH");
+        require(amount1 >= maxAmount1PerWallet[index], "the bid amount is lower than minimum ETH");
 
         // calculate price
         uint minPrice = pool.amountMin1.mul(1 ether).div(pool.amountTotal0);
@@ -442,6 +439,24 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         return address(config[StakeContract]);
     }
 
+    function _addWhitelist(uint index, address[] memory whitelist_) private {
+        for (uint i = 0; i < whitelist_.length; i++) {
+            whitelistP[index][whitelist_[i]] = true;
+        }
+    }
+
+    function addWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
+        _addWhitelist(index, whitelist_);
+    }
+
+    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
+        for (uint i = 0; i < whitelist_.length; i++) {
+            delete whitelistP[index][whitelist_[i]];
+        }
+    }
+
     function getPoolCount() external view returns (uint) {
         return pools.length;
     }
@@ -460,13 +475,6 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
 
     modifier isPoolNotClosed(uint index) {
         require(pools[index].closeAt > now, "this pool is closed");
-        _;
-    }
-
-    modifier isPoolNotCreate(address target) {
-        if (myCreatedP[target] > 0) {
-            revert("a pool has created by this address");
-        }
         _;
     }
 

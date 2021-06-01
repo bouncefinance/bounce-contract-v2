@@ -34,6 +34,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountMax1;
         // minimum amount of ETH that creator want to swap
         uint amountMin1;
+//        uint amountReserve1;
         // how many times a bid will decrease it's price
         uint times;
         // the timestamp in seconds the pool will open
@@ -41,6 +42,8 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         // the timestamp in seconds the pool will be closed
         uint closeAt;
         bool onlyBot;
+        // whether or not whitelist is enable
+        bool enableWhiteList;
     }
 
     struct Pool {
@@ -58,6 +61,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountMax1;
         // minimum amount of ETH that creator want to swap
         uint amountMin1;
+//        uint amountReserve1;
         // how many times a bid will decrease it's price
         uint times;
         // the duration in seconds the pool will be closed
@@ -66,6 +70,8 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         uint openAt;
         // the timestamp in seconds the pool will be closed
         uint closeAt;
+        // whether or not whitelist is enable
+        bool enableWhiteList;
     }
 
     Pool[] public pools;
@@ -115,10 +121,7 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) external
-        nonReentrant
-        isPoolNotCreate(poolReq.creator)
-    {
+    function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
         require(poolReq.amountTotal0 != 0, "the value of amountTotal0 is zero");
         require(poolReq.amountMin1 != 0, "the value of amountMax1 is zero");
         require(poolReq.amountMax1 != 0, "the value of amountMin1 is zero");
@@ -140,11 +143,8 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         // reset allowance to 0
         _token0.safeApprove(address(this), 0);
 
-        if (whitelist_.length > 0) {
-            enableWhiteList = true;
-            for (uint i = 0; i < whitelist_.length; i++) {
-                whitelistP[index][whitelist_[i]] = true;
-            }
+        if (poolReq.enableWhiteList) {
+            _addWhitelist(index, whitelist_);
         }
 
         // creator pool
@@ -156,10 +156,12 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountTotal0 = poolReq.amountTotal0;
         pool.amountMax1 = poolReq.amountMax1;
         pool.amountMin1 = poolReq.amountMin1;
+//        pool.amountReserve1 = poolReq.amountReserve1;
         pool.times = poolReq.times;
         pool.duration = poolReq.closeAt.sub(poolReq.openAt);
         pool.openAt = poolReq.openAt;
         pool.closeAt = poolReq.closeAt;
+        pool.enableWhiteList = poolReq.enableWhiteList;
         pools.push(pool);
 
         if (poolReq.onlyBot) {
@@ -349,6 +351,24 @@ contract BounceDutchAuction is Configurable, ReentrancyGuardUpgradeSafe {
         uint remainingTimes = pool.closeAt.sub(now).sub(1).div(stepInSeconds);
 
         return pool.closeAt.sub(remainingTimes.mul(stepInSeconds)).sub(now);
+    }
+
+    function _addWhitelist(uint index, address[] memory whitelist_) private {
+        for (uint i = 0; i < whitelist_.length; i++) {
+            whitelistP[index][whitelist_[i]] = true;
+        }
+    }
+
+    function addWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
+        _addWhitelist(index, whitelist_);
+    }
+
+    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
+        for (uint i = 0; i < whitelist_.length; i++) {
+            delete whitelistP[index][whitelist_[i]];
+        }
     }
 
     function getPoolCount() public view returns (uint) {
