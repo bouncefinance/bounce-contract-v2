@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
@@ -12,6 +13,7 @@ import "./Governable.sol";
 contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using Address for address;
 
     struct CreateReq {
         // pool name
@@ -105,6 +107,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         nonReentrant
         nameNotBeenToken(poolReq.name)
     {
+        require(!address(msg.sender).isContract(), "disallow contract caller");
         require(poolReq.amountTotal0 >= poolReq.nShare, "amountTotal0 less than nShare");
         require(poolReq.amountTotal1 != 0, "the value of amountTotal1 is zero");
         require(poolReq.nShare != 0, "the value of nShare is zero");
@@ -194,7 +197,8 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         isPoolExist(index)
         isPoolNotClosed(index)
     {
-        address payable sender = msg.sender;
+        address sender = msg.sender;
+        require(!sender.isContract(), "disallow contract caller");
         Pool memory pool = pools[index];
         require(allPlayer[index][sender] == 0, "You have already bet");
 
