@@ -93,14 +93,6 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
 
     function initialize() public initializer {
         super.__Ownable_init();
-
-        /*        config[TxFeeRatio] = 0.01 ether;
-                config[MinValueOfBotHolder] = 0.1 ether;
-                config[MinValueOfBotCreator] = 0 ether;
-                config[MiningDifficulty] = 3 ether;
-                config[EnableUniSwap] = 1;
-                config[BotToken] = uint(0x5bEaBAEBB3146685Dd74176f68a0721F91297D37);
-                config[BounceContract] = uint(0x73282A63F0e3D7e9604575420F777361ecA3C86A);*/
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external
