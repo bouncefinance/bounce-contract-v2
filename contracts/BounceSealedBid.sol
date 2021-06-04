@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
@@ -13,6 +14,7 @@ import "./interfaces/IBounceStake.sol";
 contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using Address for address;
 
     bytes32 internal constant TxFeeRatio =              bytes32("TxFeeRatio");
     bytes32 internal constant MaxBidCount =             bytes32("MaxBidCount");
@@ -123,6 +125,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
+        require(!address(msg.sender).isContract(), "disallow contract caller");
         require(poolReq.amountTotal0 != 0, "the value of amountTotal0 is zero");
         require(poolReq.amountMin1 != 0, "the value of amountMin1 is zero");
         require(poolReq.openAt <= poolReq.closeAt && poolReq.closeAt.sub(poolReq.openAt) < 7 days, "invalid closed");
@@ -183,7 +186,8 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         checkBotHolder(index)
         isPoolNotClosed(index)
     {
-        address payable sender = msg.sender;
+        address sender = msg.sender;
+        require(!address(msg.sender).isContract(), "disallow contract caller");
         Pool memory pool = pools[index];
         if (pool.enableWhiteList) {
             require(whitelistP[index][sender], "sender not in whitelist");

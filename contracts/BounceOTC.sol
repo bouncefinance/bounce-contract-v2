@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/cryptography/ECDSA.sol";
@@ -15,6 +16,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
+    using Address for address;
 
     bytes32 internal constant TxFeeRatio            = bytes32("TxFeeRatio");
     bytes32 internal constant MinValueOfBotHolder   = bytes32("MinValueOfBotHolder");
@@ -109,6 +111,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
         uint index = pools.length;
+        require(!address(msg.sender).isContract(), "disallow contract caller");
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
@@ -155,6 +158,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         checkBotHolder(index)
     {
         address payable sender = msg.sender;
+        require(!address(msg.sender).isContract(), "disallow contract caller");
         Pool memory pool = pools[index];
         require(!creatorClaimed[pool.creator][index], "pool de-listed");
 
