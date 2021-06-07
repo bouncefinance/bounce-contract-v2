@@ -99,7 +99,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         nonReentrant
         nameNotBeenToken(poolReq.name)
     {
-        require(!address(msg.sender).isContract(), "disallow contract caller");
+        require(tx.origin == msg.sender, "disallow contract caller");
         require(poolReq.amountTotal0 >= poolReq.nShare, "amountTotal0 less than nShare");
         require(poolReq.amountTotal1 != 0, "the value of amountTotal1 is zero");
         require(poolReq.nShare != 0, "the value of nShare is zero");
@@ -190,7 +190,7 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         isPoolNotClosed(index)
     {
         address sender = msg.sender;
-        require(!sender.isContract(), "disallow contract caller");
+        require(tx.origin == msg.sender, "disallow contract caller");
         Pool memory pool = pools[index];
         require(allPlayer[index][sender] == 0, "You have already bet");
 
@@ -344,11 +344,13 @@ contract BounceLottery is Configurable, ReentrancyGuardUpgradeSafe {
         }
     }
 
-    function addWhitelist(uint index, address[] memory whitelist_) public onlyOwner {
+    function addWhitelist(uint index, address[] memory whitelist_) public {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         _addWhitelist(index, whitelist_);
     }
 
-    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+    function removeWhitelist(uint index, address[] memory whitelist_) external {
+        require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         for (uint i = 0; i < whitelist_.length; i++) {
             delete whitelistP[index][whitelist_[i]];
         }

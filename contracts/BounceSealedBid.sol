@@ -125,7 +125,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
-        require(!address(msg.sender).isContract(), "disallow contract caller");
+        require(tx.origin == msg.sender, "disallow contract caller");
         require(poolReq.amountTotal0 != 0, "the value of amountTotal0 is zero");
         require(poolReq.amountMin1 != 0, "the value of amountMin1 is zero");
         require(poolReq.openAt <= poolReq.closeAt && poolReq.closeAt.sub(poolReq.openAt) < 7 days, "invalid closed");
@@ -187,7 +187,7 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         isPoolNotClosed(index)
     {
         address sender = msg.sender;
-        require(!address(msg.sender).isContract(), "disallow contract caller");
+        require(tx.origin == msg.sender, "disallow contract caller");
         Pool memory pool = pools[index];
         if (pool.enableWhiteList) {
             require(whitelistP[index][sender], "sender not in whitelist");
@@ -447,12 +447,12 @@ contract BounceSealedBid is Configurable, ReentrancyGuardUpgradeSafe {
         }
     }
 
-    function addWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+    function addWhitelist(uint index, address[] memory whitelist_) external {
         require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         _addWhitelist(index, whitelist_);
     }
 
-    function removeWhitelist(uint index, address[] memory whitelist_) external onlyOwner {
+    function removeWhitelist(uint index, address[] memory whitelist_) external {
         require(owner() == msg.sender || pools[index].creator == msg.sender, "no permission");
         for (uint i = 0; i < whitelist_.length; i++) {
             delete whitelistP[index][whitelist_[i]];

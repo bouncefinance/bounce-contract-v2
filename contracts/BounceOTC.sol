@@ -111,7 +111,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
         uint index = pools.length;
-        require(!address(msg.sender).isContract(), "disallow contract caller");
+        require(tx.origin == msg.sender, "disallow contract caller");
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
@@ -158,7 +158,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         checkBotHolder(index)
     {
         address payable sender = msg.sender;
-        require(!address(msg.sender).isContract(), "disallow contract caller");
+        require(tx.origin == msg.sender, "disallow contract caller");
         Pool memory pool = pools[index];
         require(!creatorClaimed[pool.creator][index], "pool de-listed");
 
