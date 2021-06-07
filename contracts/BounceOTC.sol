@@ -180,9 +180,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         // check if amount0 is exceeded
         uint amount0 = _amount1.mul(pool.amountTotal0).div(pool.amountTotal1);
         uint _amount0 = pool.amountTotal0.sub(amountSwap0P[index]);
-        if (_amount0 < amount0) {
-            require(amount0 - _amount0 > 100, "amount0 is too big");
-        } else {
+        if (_amount0 > amount0) {
             _amount0 = amount0;
         }
 
@@ -211,11 +209,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
         if (_amount0 > 0) {
             // send token0 to sender
-            if (pool.token0 == address(0)) {
-                sender.transfer(_amount0);
-            } else {
-                IERC20(pool.token0).safeTransfer(sender, _amount0);
-            }
+            IERC20(pool.token0).safeTransfer(sender, _amount0);
         }
         if (excessAmount1 > 0) {
             // send excess amount of token1 back to sender

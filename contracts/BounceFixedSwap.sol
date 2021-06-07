@@ -192,9 +192,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         // check if amount0 is exceeded
         uint amount0 = _amount1.mul(pool.amountTotal0).div(pool.amountTotal1);
         uint _amount0 = pool.amountTotal0.sub(amountSwap0P[index]);
-        if (_amount0 < amount0) {
-            require(amount0 - _amount0 > 100, "amount0 is too big");
-        } else {
+        if (_amount0 > amount0) {
             _amount0 = amount0;
         }
 
@@ -224,11 +222,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         if (pool.claimAt == 0) {
             if (_amount0 > 0) {
                 // send token0 to sender
-                if (pool.token0 == address(0)) {
-                    sender.transfer(_amount0);
-                } else {
-                    IERC20(pool.token0).safeTransfer(sender, _amount0);
-                }
+                IERC20(pool.token0).safeTransfer(sender, _amount0);
             }
         }
         if (excessAmount1 > 0) {
@@ -241,15 +235,15 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         }
 
         // send token1 to creator
-        uint256 txFee = _amount1.mul(getTxFeeRatio()).div(1 ether);
-        txFeeP[index] = txFeeP[index].add(txFee);
-        uint256 _actualAmount1 = _amount1.sub(txFee);
-        if (_actualAmount1 > 0) {
-            if (pool.token1 == address(0)) {
-                pool.creator.transfer(_actualAmount1);
-            } else {
-                IERC20(pool.token1).safeTransfer(pool.creator, _actualAmount1);
-            }
+        uint256 txFee = 0;
+        uint256 _actualAmount1 = _amount1;
+        if (pool.token1 == address(0)) {
+            txFee = _amount1.mul(getTxFeeRatio()).div(1 ether);
+            txFeeP[index] = txFeeP[index].add(txFee);
+            _actualAmount1 = _amount1.sub(txFee);
+            pool.creator.transfer(_actualAmount1);
+        } else {
+            IERC20(pool.token1).safeTransfer(pool.creator, _actualAmount1);
         }
 
         emit Swapped(index, sender, _amount0, _actualAmount1, txFee);
@@ -290,11 +284,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         myClaimed[sender][index] = true;
         if (myAmountSwapped0[sender][index] > 0) {
             // send token0 to sender
-            if (pool.token0 == address(0)) {
-                msg.sender.transfer(myAmountSwapped0[sender][index]);
-            } else {
-                IERC20(pool.token0).safeTransfer(msg.sender, myAmountSwapped0[sender][index]);
-            }
+            IERC20(pool.token0).safeTransfer(msg.sender, myAmountSwapped0[sender][index]);
         }
         emit UserClaimed(index, sender, myAmountSwapped0[sender][index]);
     }

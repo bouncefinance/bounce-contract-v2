@@ -299,7 +299,7 @@ describe('BounceFixedSwap', function () {
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10005'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10005'));
             expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9990'));
-            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10009.85'));
+            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10010'));
         });
 
         it('when swap ERC20/USDT less than 1 ether', async function () {
@@ -314,7 +314,7 @@ describe('BounceFixedSwap', function () {
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10000.05'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10009.95'));
             expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9999.9'));
-            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10000.0985'));
+            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10000.1'));
         });
 
         it('when swap ERC20/USDT exceeded 1', async function () {
@@ -329,7 +329,7 @@ describe('BounceFixedSwap', function () {
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10010'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10000'));
             expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9980'));
-            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10019.7'));
+            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10020'));
         });
 
         it('when swap ERC20/USDT exceeded 2', async function () {
@@ -344,7 +344,7 @@ describe('BounceFixedSwap', function () {
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10004.9999995'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10005.0000005'));
             expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9990.000001'));
-            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10009.85'));
+            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10009.999999'));
 
             const amount1_2 = usd('10');
             await this.usdToken.approve(this.fs.address, amount1_2, { from: buyer });
@@ -355,7 +355,7 @@ describe('BounceFixedSwap', function () {
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10009.9999995'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10000.0000005'));
             expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9980.000001'));
-            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10019.7'));
+            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10019.999999'));
 
             const amount1_3 = usd('1');
             await this.usdToken.approve(this.fs.address, amount1_3, { from: buyer });
@@ -366,7 +366,7 @@ describe('BounceFixedSwap', function () {
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10010'));
             expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10000'));
             expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9980'));
-            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10019.700001'));
+            expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10020'));
         });
 
         it('when swap ERC20/USDT not open should throw exception', async function () {
@@ -391,7 +391,7 @@ describe('BounceFixedSwap', function () {
                 expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10005'));
                 expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10005'));
                 expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9990'));
-                expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10009.85'));
+                expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10010'));
             });
 
             it('claim should work', async function () {
@@ -412,7 +412,7 @@ describe('BounceFixedSwap', function () {
                 expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10005'));
                 expect(await this.erc20Token.balanceOf(this.fs.address)).to.be.bignumber.equal(ether('10000'));
                 expect(await this.usdToken.balanceOf(buyer)).to.be.bignumber.equal(usd('9990'));
-                expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10009.85'));
+                expect(await this.usdToken.balanceOf(creator)).to.be.bignumber.equal(usd('10010'));
             });
         });
     });
