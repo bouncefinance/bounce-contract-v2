@@ -18,6 +18,8 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     using ECDSA for bytes32;
     using Address for address;
 
+    uint    internal constant PoolTypeSell          = 0;
+    uint    internal constant PoolTypeBuy           = 1;
     bytes32 internal constant TxFeeRatio            = bytes32("TxFeeRatio");
     bytes32 internal constant MinValueOfBotHolder   = bytes32("MinValueOfBotHolder");
     bytes32 internal constant BotToken              = bytes32("BotToken");
@@ -26,9 +28,9 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     struct CreateReq {
         // pool name
         string name;
-        // address of sell token
+        // address of token0
         address token0;
-        // address of buy token
+        // address of token1
         address token1;
         // total amount of token0
         uint amountTotal0;
@@ -37,6 +39,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         // the timestamp in seconds the pool will open
         uint openAt;
         uint maxAmount1PerWallet;
+        uint poolType;
         bool onlyBot;
         bool enableWhiteList;
     }
@@ -46,9 +49,9 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         string name;
         // creator of the pool
         address payable creator;
-        // address of sell token
+        // address of token0
         address token0;
-        // address of buy token
+        // address of token1
         address token1;
         // total amount of token0
         uint amountTotal0;
@@ -56,6 +59,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountTotal1;
         // the timestamp in seconds the pool will open
         uint openAt;
+        uint poolType;
         // whether or not whitelist is enable
         bool enableWhiteList;
     }
@@ -70,7 +74,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     mapping(uint => uint) public amountSwap1P;
     // pool index => the swap pool only allow BOT holder to take part in
     mapping(uint => bool) public onlyBotHolderP;
-    // pool index => maximum swap amount of ETH per wallet, if the value is not set, the default value is zero
+    // pool index => maximum swap amount of token1 wallet, if the value is not set, the default value is zero
     mapping(uint => uint) public maxAmount1PerWalletP;
     // team address => pool index => whether or not creator's pool has been claimed
     mapping(address => mapping(uint => bool)) public creatorClaimed;
@@ -115,6 +119,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
         require(poolReq.amountTotal1 != 0, "invalid amountTotal1");
         require(poolReq.openAt >= now, "invalid openAt");
+        require(poolReq.poolType == PoolTypeSell || poolReq.poolType == PoolTypeBuy, "invalid poolType");
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         if (poolReq.maxAmount1PerWallet != 0) {
@@ -146,6 +151,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         pool.amountTotal0 = poolReq.amountTotal0;
         pool.amountTotal1 = poolReq.amountTotal1;
         pool.openAt = poolReq.openAt;
+        pool.poolType = poolReq.poolType;
         pool.enableWhiteList = poolReq.enableWhiteList;
         pools.push(pool);
 
