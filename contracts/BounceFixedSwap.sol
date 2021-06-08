@@ -239,7 +239,7 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
         uint256 _actualAmount1 = _amount1;
         if (pool.token1 == address(0)) {
             txFee = _amount1.mul(getTxFeeRatio()).div(1 ether);
-            txFeeP[index] = txFeeP[index].add(txFee);
+            txFeeP[index] += txFee;
             _actualAmount1 = _amount1.sub(txFee);
             pool.creator.transfer(_actualAmount1);
         } else {
