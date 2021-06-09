@@ -38,7 +38,6 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         uint amountTotal1;
         // the timestamp in seconds the pool will open
         uint openAt;
-        uint maxAmount1PerWallet;
         uint poolType;
         bool onlyBot;
         bool enableWhiteList;
@@ -60,7 +59,6 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         // the timestamp in seconds the pool will open
         uint openAt;
         uint poolType;
-        // whether or not whitelist is enable
         bool enableWhiteList;
     }
 
@@ -74,8 +72,6 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     mapping(uint => uint) public amountSwap1P;
     // pool index => the swap pool only allow BOT holder to take part in
     mapping(uint => bool) public onlyBotHolderP;
-    // pool index => maximum swap amount of token1 wallet, if the value is not set, the default value is zero
-    mapping(uint => uint) public maxAmount1PerWalletP;
     // team address => pool index => whether or not creator's pool has been claimed
     mapping(address => mapping(uint => bool)) public creatorClaimed;
     // user address => pool index => swapped amount of token0
@@ -113,7 +109,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
     }
 
-    function create(CreateReq memory poolReq, address[] memory whitelist_) external nonReentrant {
+    function create(CreateReq memory poolReq, address[] memory whitelist_) external payable nonReentrant {
         uint index = pools.length;
         require(tx.origin == msg.sender, "disallow contract caller");
         require(poolReq.amountTotal0 != 0, "invalid amountTotal0");
@@ -122,21 +118,22 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         require(poolReq.poolType == PoolTypeSell || poolReq.poolType == PoolTypeBuy, "invalid poolType");
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
-        if (poolReq.maxAmount1PerWallet != 0) {
-            maxAmount1PerWalletP[index] = poolReq.maxAmount1PerWallet;
-        }
         if (poolReq.onlyBot) {
             onlyBotHolderP[index] = poolReq.onlyBot;
         }
 
-        // transfer amount of token0 to this contract
-        IERC20  _token0 = IERC20(poolReq.token0);
-        uint token0BalanceBefore = _token0.balanceOf(address(this));
-        _token0.safeTransferFrom(msg.sender, address(this), poolReq.amountTotal0);
-        require(
-            _token0.balanceOf(address(this)).sub(token0BalanceBefore) == poolReq.amountTotal0,
-            "not support deflationary token"
-        );
+        if (poolReq.token0 == address(0)) {
+            require(poolReq.amountTotal0 == msg.value, "invalid amountTotal0");
+        } else {
+            // transfer amount of token0 to this contract
+            IERC20  _token0 = IERC20(poolReq.token0);
+            uint token0BalanceBefore = _token0.balanceOf(address(this));
+            _token0.safeTransferFrom(msg.sender, address(this), poolReq.amountTotal0);
+            require(
+                _token0.balanceOf(address(this)).sub(token0BalanceBefore) == poolReq.amountTotal0,
+                "not support deflationary token"
+            );
+        }
 
         if (poolReq.enableWhiteList) {
             require(whitelist_.length > 0, "no whitelist imported");
@@ -193,14 +190,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         amountSwap0P[index] = amountSwap0P[index].add(_amount0);
         amountSwap1P[index] = amountSwap1P[index].add(_amount1);
         myAmountSwapped0[sender][index] = myAmountSwapped0[sender][index].add(_amount0);
-        // check if swapped amount of token1 is exceeded maximum allowance
-        if (maxAmount1PerWalletP[index] != 0) {
-            require(
-                myAmountSwapped1[sender][index].add(_amount1) <= maxAmount1PerWalletP[index],
-                "swapped amount of token1 is exceeded maximum allowance"
-            );
-            myAmountSwapped1[sender][index] = myAmountSwapped1[sender][index].add(_amount1);
-        }
+        myAmountSwapped1[sender][index] = myAmountSwapped1[sender][index].add(_amount1);
 
         if (pool.amountTotal1 == amountSwap1P[index]) {
             filledAtP[index] = now;
@@ -215,7 +205,11 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
         if (_amount0 > 0) {
             // send token0 to sender
-            IERC20(pool.token0).safeTransfer(sender, _amount0);
+            if (pool.token0 == address(0)) {
+                sender.transfer(_amount0);
+            } else {
+                IERC20(pool.token0).safeTransfer(sender, _amount0);
+            }
         }
         if (excessAmount1 > 0) {
             // send excess amount of token1 back to sender
@@ -259,7 +253,11 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
 
         uint unSwapAmount0 = pool.amountTotal0 - amountSwap0P[index];
         if (unSwapAmount0 > 0) {
-            IERC20(pool.token0).safeTransfer(pool.creator, unSwapAmount0);
+            if (pool.token0 == address(0)) {
+                pool.creator.transfer(unSwapAmount0);
+            } else {
+                IERC20(pool.token0).safeTransfer(pool.creator, unSwapAmount0);
+            }
         }
 
         emit Claimed(index, msg.sender, unSwapAmount0, txFeeP[index]);
