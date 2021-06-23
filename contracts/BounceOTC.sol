@@ -95,7 +95,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         super.__Ownable_init();
         super.__ReentrancyGuard_init();
 
-        config[TxFeeRatio] = 0.015 ether;
+        config[TxFeeRatio] = 0.003 ether; // 0.3%
         config[MinValueOfBotHolder] = 60 ether;
 
         config[BotToken] = uint(0xA9B1Eb5908CfC3cdf91F9B8B3a74108598009096);
