@@ -269,6 +269,8 @@ contract BounceFixedSwap is Configurable, ReentrancyGuardUpgradeSafe {
             if (pool.token1 == address(0)) {
                 // deposit transaction fee to staking contract
                 IBounceStake(getStakeContract()).depositReward{value: txFeeP[index]}();
+            } else {
+                IERC20(pool.token1).safeTransfer(getStakeContract(), txFeeP[index]);
             }
         }
 
