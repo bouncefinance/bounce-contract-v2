@@ -64,7 +64,7 @@ describe('BounceOTC', function () {
         const amountTotal0 = ether('10');
         const amountTotal1 = ether('20');
         const openAt = (await time.latest()).add(time.duration.hours(1));
-        const maxAmount1PerWallet = ether('100');
+        const poolType = new BN('0');
         const onlyBot = true;
         const enableWhiteList = true;
         let whitelist = [];
@@ -73,7 +73,7 @@ describe('BounceOTC', function () {
         }
         whitelist.push(buyer);
         const createReq = [
-            name, token0, token1, amountTotal0, amountTotal1, openAt, maxAmount1PerWallet, onlyBot, enableWhiteList
+            name, token0, token1, amountTotal0, amountTotal1, openAt, poolType, onlyBot, enableWhiteList
         ];
         const index = 0;
         await this.erc20Token.approve(this.otc.address, amountTotal0, { from: creator });
@@ -99,11 +99,11 @@ describe('BounceOTC', function () {
             const amountTotal0 = ether('10');
             const amountTotal1 = ether('20');
             const openAt = (await time.latest()).add(time.duration.hours(1));
-            const maxAmount1PerWallet = ether('100');
+            const poolType = new BN('0');
             const onlyBot = true;
             const enableWhiteList = true;
             const createReq = [
-                name, token0, token1, amountTotal0, amountTotal1, openAt, maxAmount1PerWallet, onlyBot, enableWhiteList
+                name, token0, token1, amountTotal0, amountTotal1, openAt, poolType, onlyBot, enableWhiteList
             ];
             const index = 0;
             await this.erc20Token.approve(this.otc.address, amountTotal0, { from: creator });
@@ -115,10 +115,10 @@ describe('BounceOTC', function () {
             expect(pool.token1).to.equal(token1);
             expect(pool.amountTotal0).to.be.bignumber.equal(amountTotal0);
             expect(pool.amountTotal1).to.be.bignumber.equal(amountTotal1);
+            expect(pool.poolType).to.be.bignumber.equal(poolType);
             expect(pool.openAt).to.be.bignumber.equal(openAt);
             expect(pool.enableWhiteList).to.equal(enableWhiteList);
             expect(await this.otc.onlyBotHolderP(index)).to.equal(onlyBot);
-            expect(await this.otc.maxAmount1PerWalletP(index)).to.be.bignumber.equal(maxAmount1PerWallet);
             expect(await this.otc.getPoolCount()).to.be.bignumber.equal(new BN('1'));
             expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9990'));
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10000'));
@@ -239,11 +239,11 @@ describe('BounceOTC', function () {
             const amountTotal0 = ether('10');
             const amountTotal1 = usd('20');
             const openAt = (await time.latest()).add(time.duration.hours(1));
-            const maxAmount1PerWallet = ether('0');
+            const poolType = new BN('0');
             const onlyBot = true;
             const enableWhiteList = true;
             const createReq = [
-                name, token0, token1, amountTotal0, amountTotal1, openAt, maxAmount1PerWallet, onlyBot, enableWhiteList
+                name, token0, token1, amountTotal0, amountTotal1, openAt, poolType, onlyBot, enableWhiteList
             ];
             const index = 0;
             const whitelist = [buyer];
@@ -259,7 +259,6 @@ describe('BounceOTC', function () {
             expect(pool.openAt).to.be.bignumber.equal(openAt);
             expect(pool.enableWhiteList).to.equal(enableWhiteList);
             expect(await this.otc.onlyBotHolderP(index)).to.equal(onlyBot);
-            expect(await this.otc.maxAmount1PerWalletP(index)).to.be.bignumber.equal(maxAmount1PerWallet);
             expect(await this.otc.getPoolCount()).to.be.bignumber.equal(new BN('1'));
             expect(await this.erc20Token.balanceOf(creator)).to.be.bignumber.equal(ether('9990'));
             expect(await this.erc20Token.balanceOf(buyer)).to.be.bignumber.equal(ether('10000'));
