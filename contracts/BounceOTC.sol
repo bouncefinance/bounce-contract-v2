@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 import "@openzeppelin/contracts-ethereum-package/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 import "./Governable.sol";
-import "./interfaces/IBounceStake.sol";
 
 contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     using SafeMath for uint;
@@ -91,29 +90,20 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
     event Claimed(uint indexed index, address indexed sender, uint amount0, uint txFee);
     event UserClaimed(uint indexed index, address indexed sender, uint amount0);
 
-    function initialize() public initializer {
+    function initialize(
+        uint txFeeRatio,
+        uint minBotHolder,
+        address botToken,
+        address stakeContract
+    ) public initializer {
         super.__Ownable_init();
         super.__ReentrancyGuard_init();
 
-        config[TxFeeRatio] = 0.005 ether; // 0.5%
-        config[MinValueOfBotHolder] = 60 ether;
+        config[TxFeeRatio] = txFeeRatio;
+        config[MinValueOfBotHolder] = minBotHolder;
 
-        config[BotToken] = uint(0xA9B1Eb5908CfC3cdf91F9B8B3a74108598009096); // AUCTION
-        config[StakeContract] = uint(0x98945BC69A554F8b129b09aC8AfDc2cc2431c48E);
-    }
-
-    function initialize_rinkeby() public {
-        initialize();
-
-        config[BotToken] = uint(0x5E26FA0FE067d28aae8aFf2fB85Ac2E693BD9EfA); // AUCTION
-        config[StakeContract] = uint(0xa77A9FcbA2Ae5599e0054369d1655D186020ECE1);
-    }
-
-    function initialize_bsc() public {
-        initialize();
-
-        config[BotToken] = uint(0x1188d953aFC697C031851169EEf640F23ac8529C); // AUCTION
-        config[StakeContract] = uint(0x1dd665ba1591756aa87157F082F175bDcA9fB91a);
+        config[BotToken] = uint(botToken); // AUCTION
+        config[StakeContract] = uint(stakeContract);
     }
 
     function create(CreateReq memory poolReq, address[] memory whitelist_) external payable nonReentrant {
@@ -126,6 +116,7 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         require(bytes(poolReq.name).length <= 15, "length of name is too long");
 
         if (poolReq.onlyBot) {
+            require(getBotToken() != address(0), "BOT holder not supported");
             onlyBotHolderP[index] = poolReq.onlyBot;
         }
 
@@ -254,13 +245,13 @@ contract BounceOTC is Configurable, ReentrancyGuardUpgradeSafe {
         if (txFeeP[index] > 0) {
             if (pool.token1 == address(0)) {
                 // deposit transaction fee to staking contract
-                IBounceStake(getStakeContract()).depositReward{value: txFeeP[index]}();
+                payable(getStakeContract()).transfer(txFeeP[index]);
             } else {
                 IERC20(pool.token1).safeTransfer(getStakeContract(), txFeeP[index]);
             }
         }
 
-        uint unSwapAmount0 = pool.amountTotal0 - amountSwap0P[index];
+        uint unSwapAmount0 = pool.amountTotal0.sub(amountSwap0P[index]);
         if (unSwapAmount0 > 0) {
             if (pool.token0 == address(0)) {
                 pool.creator.transfer(unSwapAmount0);

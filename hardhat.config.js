@@ -20,7 +20,11 @@ module.exports = {
       accounts: [mnemonic]
     },
     bsc: {
-      url: `https://bsc-dataseed4.binance.org/`,
+      url: `https://bsc-dataseed.binance.org/`,
+      accounts: [mnemonic]
+    },
+    polygon: {
+      url: `https://rpc-mainnet.maticvigil.com/`,
       accounts: [mnemonic]
     }
   },
